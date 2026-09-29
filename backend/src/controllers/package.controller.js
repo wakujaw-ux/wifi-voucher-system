@@ -1,13 +1,14 @@
 const packageService = require('../services/package.service');
 const { validateCreatePackage, validateUpdatePackage } = require('../validators/package.validator');
 const { success, error } = require('../utils/response');
+
 const getAll = async (req, res) => {
     try{
         const filters = {};
         if (req.query.site_id) filters.site_id = req.query.site_id;
         if (req.query.is_active !== undefined) filters.is_active = req.query.is_active === 'true';
 
-        const packages = await packageService.getAllpackages(filters);
+        const packages = await packageService.getAllPackages(filters);
         return success(res, {count: packages.length, packages }, 'Packages zimepatikana');
     } catch (err) {
         console.error('getAll packages error:', err.message);
