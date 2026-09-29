@@ -10,7 +10,7 @@ router.use(authenticate);
 router.get('/', packageController.getAll);
 
 //GET /api/packages/:id - package moja
-router,get('/:id', packageController.getOne)
+router.get('/:id', packageController.getOne)
 
 //POST /api/packages - Unda package (ADMIN AU SUPER_ADMIN tu)
 router.post('/', requireRole('ADMIN', 'SUPER_ADMIN'), packageController.create);
