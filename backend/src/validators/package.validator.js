@@ -45,4 +45,4 @@ const validateUpdatePackage = (data) => {
     return errors;
 };
 
-module.exports = {validateCreatePackage, validateUpdatePackage};
+module.exports = { validateCreatePackage, validateUpdatePackage };
