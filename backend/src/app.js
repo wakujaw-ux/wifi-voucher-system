@@ -5,6 +5,7 @@ require('dotenv').config();
 const healthRoutes = require('./routes/health.routes');
 const authRoutes = require('./routes/auth.routes');
 const packageRoutes = require('./routes/package.routes');
+const voucherRoutes = require('./routes/voucher.routes');
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/packages', packageRoutes);
+app.use('/api/vouchers', voucherRoutes);
 
 app.get('/', (req, res) => {
   res.json({
