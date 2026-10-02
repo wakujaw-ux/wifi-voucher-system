@@ -215,10 +215,57 @@ const getVoucherStats = async (filters = {}) => {
   return stats;
 };
 
+// ============================================================
+// REVOKE VOUCHER
+// ============================================================
+const revokeVoucher  = async (id, userId, reason) => {
+  const voucher = await getVoucherById(id);
+
+  // Hakuna haja ya ku-revoke voucher ambayo tayari ime-revoked au ime-used au ime-expired
+  if (voucher.status === 'USED' || voucher.status === 'EXPIRED') {
+    const err = new Error(`Voucher haiwezi kurevoke. status: ${voucher.status}`);
+    err.code = 'VOUCHER_NOT_REVOKABLE';
+    err.status = 400;
+    throw err;
+  }
+
+  if (voucher.status === 'REVOKED') {
+    const err = new Error('Voucher tayari ime-revoked');
+    err.code = 'VOUCHER_ALREADY_REVOKED';
+    err.status = 400;
+    throw err;
+  }
+
+  const sql = `UPDATE vouchers SET status = 'REVOKED', revoked_at = NOW(), revoked_by = $1, updated_at = NOW() WHERE id = $2 RETURNING id, code, status, revoked_at, revoked_by`;
+
+  const result = await db.query(sql, [userId, id]);
+
+  return result.rows[0];
+};
+
+// ============================================================
+// MARK VOUCHER AS AVAILABLE (baada ya sync na Mikrotik)
+// ============================================================
+const markVoucherAvailable = async (id, mikrotikUser) => {
+  const sql = `UPDATE vouchers
+  SET status = 'AVAILABLE', mikrotik_sync = 'SYNCED', mikrotik_user = $1, updated_at = NOW()
+  WHERE id = $2 AND status = 'CREATED'
+   RETURNING id, code, status, mikrotik_sync, mikrotik_user`;
+
+  const result = await db.query(sql, [mikrotikUser, id]);
+
+  return result.rows[0];
+};
+  
+
+
+
 module.exports = {
   generateVouchers,
   getAllVouchers,
   getVoucherById,
   getVoucherByCode,
   getVoucherStats,
+  revokeVoucher,
+  markVoucherAvailable,
 };
