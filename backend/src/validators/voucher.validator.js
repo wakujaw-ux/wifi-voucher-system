@@ -24,4 +24,24 @@ const validateGenerateVouchers = (data) => {
     return errors;
 };
 
-module.exports = { validateGenerateVouchers };
+const validateSellVoucher = (data) => {
+    const errors = [];
+    if (!data.voucher_id) errors.push('voucher_id inahitajika');
+    if (data.payment_method !== undefined) {
+        const allowed = ['CASH', 'MPESA', 'AIRTEL_MONEY', 'TIGO_PESA', 'HALOPESA', 'BANK'];
+        if (!allowed.includes(data.payment_method)) {
+            errors.push(`payment_method lazima iwe moja ya: ${allowed.join(', ')}`);
+        }
+    }
+    return errors;
+};
+
+const validateRevokeVoucher = (data) => {
+    const errors = [];
+    if (data.reason !== undefined && typeof data.reason !== 'string') {
+        errors.push('reason lazima iwe mandishi');
+    }
+    return errors;
+};
+
+module.exports = { validateGenerateVouchers, validateSellVoucher, validateRevokeVoucher };
