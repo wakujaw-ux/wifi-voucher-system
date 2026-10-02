@@ -2,6 +2,8 @@ const voucherService = require('../services/voucher.service');
 const { validateGenerateVouchers } = require('../validators/voucher.validator');
 const { success, error } = require('../utils/response');
 const { query } = require('../config/database');
+const  saleVoucher = require('../services/sale.service');
+const { validateGenerateVouchers, validateSellVoucher, validateRevokeVoucher } = require('../validators/voucher.validator');
 
 // POST /api/vouchers/generate
 const generate = async (req, res) => {
@@ -76,4 +78,37 @@ const getByCode = async (req, res) => {
     }
 };
 
-module.exports = { generate, getAll, getOne, getByCode, getStats };
+// POST /api/vouchers/:id/sell
+const sell = async (req, res) => {
+    const data = { voucher_id: req.params.id, ...req.body };
+    const errors = validateSellVoucher(data);
+    if (errors.length > 0) {
+        return error(res, errors.join(', '), 'VALIDATION_ERROR', 400);
+    }
+
+    try {
+        const result = await saleService.sellVoucher(data, req.user.userId);
+        return success(res, result, 'Voucher imeuzwa kwa mafanikio', 201);
+    } catch (err) {
+        console.error('sell voucher error:', err.message);
+        return error(res, err.message, err.code || 'SELL_FAILED', err.status || 500);
+    }
+};
+
+// POST /api/vouchers/:id/revoke
+const revoke = async (req, res) => {
+    const errors = validateRevokeVoucher(req.body);
+    if (errors.length > 0) {
+        return error(res, errors.join(', '), 'VALIDATION_ERROR', 400);
+    }
+
+    try {
+        const voucher = await voucherService.revokeVoucher(req.params.id, req.user.userId, req.body.reason);
+        return success(res, { voucher }, 'Voucher imerevoked');
+    } catch (err) {
+        return error(res, err.message, err.code || 'REVOKE_FAILED', err.status || 500);
+    }
+};
+
+
+module.exports = { generate, getAll, getOne, getByCode, getStats, sell, revoke };
