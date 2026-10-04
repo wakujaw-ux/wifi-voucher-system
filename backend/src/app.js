@@ -1,3 +1,5 @@
+
+const sessionRoutes = require('./routes/session.routes');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -18,6 +20,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/packages', packageRoutes);
 app.use('/api/vouchers', voucherRoutes);
 app.use('/api/sales', saleRoutes);
+app.use('/api/sessions', sessionRoutes);
 
 
 app.get('/', (req, res) => {
