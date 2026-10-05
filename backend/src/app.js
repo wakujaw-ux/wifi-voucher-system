@@ -1,4 +1,5 @@
 
+const dashboardRoutes = require('./routes/dashboard.routes');
 const sessionRoutes = require('./routes/session.routes');
 const express = require('express');
 const cors = require('cors');
@@ -21,7 +22,7 @@ app.use('/api/packages', packageRoutes);
 app.use('/api/vouchers', voucherRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/sessions', sessionRoutes);
-
+app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/', (req, res) => {
   res.json({
