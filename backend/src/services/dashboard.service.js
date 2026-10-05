@@ -59,7 +59,7 @@ const getSummary = async (filters = {}) => {
     COALESCE(SUM(amount) FILTER (WHERE expense_date = CURRENT_DATE), 0)::numeric AS today_expenses,
     COALESCE(SUM(amount), 0)::numeric AS total_expenses
     FROM expenses
-    &{whereSql}`;
+    ${whereSql}`;
 
     const expenses = (await db.query(expensesSql, params)).rows[0];
 
