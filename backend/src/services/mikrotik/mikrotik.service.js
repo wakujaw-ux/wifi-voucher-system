@@ -1,4 +1,4 @@
-const { version } = require('react');
+
 const client = require('./mikrotik.client');
 
 // =========================================================

@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/database");
 const { success, error } = require("../utils/response");
-const mikrotikService = require('../services/mikrotik/mikrotik.service');
+const mikrotikService = require("../services/mikrotik/mikrotik.service");
 
 // GET /api/health - Health check
 router.get("/", (req, res) => {
@@ -21,7 +21,7 @@ router.get("/", (req, res) => {
 router.get("/db", async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT NOW() as current_time, version() as version',
+      "SELECT NOW() as current_time, version() as version",
     );
     return success(
       res,
@@ -67,7 +67,7 @@ router.get("/db/tables", async (req, res) => {
 router.get("/db/packages", async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT id, name, duration_minutes FROM packages ORDER BY price',
+      "SELECT id, name, duration_minutes FROM packages ORDER BY price",
     );
     return success(
       res,
@@ -83,12 +83,16 @@ router.get("/db/packages", async (req, res) => {
 });
 
 // GET /api/health/mikrotik
-router.get('/mikrotik', async (req, res) => {
+router.get("/mikrotik", async (req, res) => {
   try {
     const health = await mikrotikService.healthCheck();
-    return success(res, health, health.online ? 'MikroTik iko online' : 'MikroTik iko offline');
+    return success(
+      res,
+      health,
+      health.online ? "MikroTik iko online" : "MikroTik iko offline",
+    );
   } catch (err) {
-    return error(res, err.message, 'MIKROTIK_ERROR', 500);
+    return error(res, err.message, "MIKROTIK_ERROR", 500);
   }
 });
 
