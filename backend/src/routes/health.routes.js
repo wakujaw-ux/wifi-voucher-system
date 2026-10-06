@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/database");
 const { success, error } = require("../utils/response");
+const mikrotikService = require('../services/mikrotik/mikrotik.service');
 
 // GET /api/health - Health check
 router.get("/", (req, res) => {
@@ -78,6 +79,16 @@ router.get("/db/packages", async (req, res) => {
     );
   } catch (err) {
     return error(res, err.message, "QUERY_FAILED", 500);
+  }
+});
+
+// GET /api/health/mikrotik
+router.get('/mikrotik', async (req, res) => {
+  try {
+    const health = await mikrotikService.healthCheck();
+    return success(res, health, health.online ? 'MikroTik iko online' : 'MikroTik iko offline');
+  } catch (err) {
+    return error(res, err.message, 'MIKROTIK_ERROR', 500);
   }
 });
 
