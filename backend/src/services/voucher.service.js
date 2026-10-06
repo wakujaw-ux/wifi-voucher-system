@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { generateBulkCodes } = require('../utils/voucherCode');
+const hotspotService = require('./mikrotik/hotspot.service');
 
 // ============================================================
 // GENERATE VOUCHERS (Batch + Vouchers)
@@ -69,12 +70,50 @@ const generateVouchers = async (data, userId) => {
 
     const vouchersResult = await client.query(insertSql, params);
 
-    await client.query('COMMIT');
+        await client.query('COMMIT');
+
+    // Sync vouchers to MikroTik hotspot
+    const syncedVouchers = [];
+    for (const voucher of vouchersResult.rows) {
+      const syncResult = await hotspotService.syncVoucherToHotspot(voucher);
+
+      if (syncResult.success) {
+        await db.query(
+          `UPDATE vouchers
+           SET mikrotik_sync = 'SYNCED', mikrotik_user = $1, status = 'AVAILABLE', updated_at = NOW()
+           WHERE id = $2`,
+          [voucher.code, voucher.id]
+        );
+
+        syncedVouchers.push({
+          ...voucher,
+          mikrotik_sync: 'SYNCED',
+          mikrotik_user: voucher.code,
+          status: 'AVAILABLE',
+        });
+      } else {
+        await db.query(
+          `UPDATE vouchers
+           SET mikrotik_sync = 'FAILED', updated_at = NOW()
+           WHERE id = $1`,
+          [voucher.id]
+        );
+
+        syncedVouchers.push({
+          ...voucher,
+          mikrotik_sync: 'FAILED',
+          error: syncResult.error,
+        });
+      }
+    }
 
     return {
       batch,
-      vouchers: vouchersResult.rows,
+      vouchers: syncedVouchers,
+      synced_count: syncedVouchers.filter((v) => v.mikrotik_sync === 'SYNCED').length,
+      failed_count: syncedVouchers.filter((v) => v.mikrotik_sync === 'FAILED').length,
     };
+
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
