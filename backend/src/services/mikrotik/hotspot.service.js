@@ -55,5 +55,5 @@ const getAllHotspotUsers = async () => {
 };
 
 module.exports = {
-    syncVoucherToHotspot, removeVoucherFromHotspot, getActiveSessions, disconnectSession, getAllHotspotUsers,
+  syncVoucherToHotspot, removeVoucherFromHotspot, getActiveSessions, disconnectSession, getAllHotspotUsers,
 };
