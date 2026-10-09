@@ -5,90 +5,101 @@ const db = require('../config/database');
 // SUMMARY - Muhtasari mmoja kwa dashboard
 // ============================================================
 const getSummary = async (filters = {}) => {
-    const { site_id } = filters;
-    const params = [];
-    let whereSql = 'WHERE  1 = 1';
+  const { site_id } = filters;
+  const params = [];
+  let whereSql = 'WHERE 1 = 1';
 
-    if (site_id) {
-        whereSql += ` AND site_id = $1`;
-        params.push(site_id);
-    }
+  if (site_id) {
+    whereSql += ` AND site_id = $1`;
+    params.push(site_id);
+  }
 
-    // Sales za leo (Mauzo ya leo)
-    const todaySalesSql = `SELECT
-    COUNT(*)::int AS today_count,
-    COALESCE(SUM(amount), 0)::numeric AS today_revenue
+  // Sales za leo
+  const todaySalesSql = `
+    SELECT
+      COUNT(*)::int AS today_count,
+      COALESCE(SUM(amount), 0)::numeric AS today_revenue
     FROM sales
-    ${whereSql} AND created_at >= CURRENT_DATE`;
+    ${whereSql} AND created_at >= CURRENT_DATE
+  `;
+  const todaySales = (await db.query(todaySalesSql, params)).rows[0];
 
-    const todaySales = (await db.query(todaySalesSql, params)).rows[0];
-
-    // Sales zote (Mauzo yote)
-    const totalSalesSql = ` SELECT
-    COUNT(*)::int AS total_count,
-    COALESCE(SUM(amount), 0)::numeric AS total_revenue
+  // Sales zote
+  const totalSalesSql = `
+    SELECT
+      COUNT(*)::int AS total_count,
+      COALESCE(SUM(amount), 0)::numeric AS total_revenue
     FROM sales
-    ${whereSql}`;
+    ${whereSql}
+  `;
+  const totalSales = (await db.query(totalSalesSql, params)).rows[0];
 
-    const totalSales = (await db.query(todaySalesSql, params)).rows[0];
-
-    // Voucher stats
-     const voucherSql = `SELECT
-    COUNT(*)::int AS total,
-    COUNT(*) FILTER (WHERE status = 'SOLD')::int AS sold,
-    COUNT(*) FILTER (WHERE status = 'ACTIVE')::int AS active,
-    COUNT(*) FILTER (WHERE status = 'USED')::int AS used,
-    COUNT(*) FILTER (WHERE status = 'EXPIRED')::int AS expired,
-    COUNT(*) FILTER (WHERE status = 'REVOKED')::int AS revoked
+  // Voucher stats
+  const voucherSql = `
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE status IN ('CREATED', 'AVAILABLE'))::int AS available,
+      COUNT(*) FILTER (WHERE status = 'SOLD')::int AS sold,
+      COUNT(*) FILTER (WHERE status = 'ACTIVE')::int AS active,
+      COUNT(*) FILTER (WHERE status = 'USED')::int AS used,
+      COUNT(*) FILTER (WHERE status = 'EXPIRED')::int AS expired,
+      COUNT(*) FILTER (WHERE status = 'REVOKED')::int AS revoked
     FROM vouchers
-    ${whereSql}`;
+    ${whereSql}
+  `;
+  const vouchers = (await db.query(voucherSql, params)).rows[0];
 
-    const vouchers = (await db.query(voucherSql, params)).rows[0];
-
-    // Active sessions
-    const activeSessionsSql = `
+  // Active sessions
+  const activeSessionsSql = `
     SELECT COUNT(*)::int AS online_users
     FROM sessions
-    ${whereSql} AND status = 'ACTIVE'`;
+    ${whereSql} AND status = 'ACTIVE'
+  `;
+  const sessions = (await db.query(activeSessionsSql, params)).rows[0];
 
-    const sessions = (await db.query(activeSessionsSql,params)).rows[0];
-
-    // Expenses (leo + jumla)
-    const expensesSql = `
+  // Expenses
+  const expensesSql = `
     SELECT
-    COALESCE(SUM(amount) FILTER (WHERE expense_date = CURRENT_DATE), 0)::numeric AS today_expenses,
-    COALESCE(SUM(amount), 0)::numeric AS total_expenses
+      COALESCE(SUM(amount) FILTER (WHERE expense_date = CURRENT_DATE), 0)::numeric AS today_expenses,
+      COALESCE(SUM(amount), 0)::numeric AS total_expenses
     FROM expenses
-    ${whereSql}`;
+    ${whereSql}
+  `;
+  const expenses = (await db.query(expensesSql, params)).rows[0];
 
-    const expenses = (await db.query(expensesSql, params)).rows[0];
+  // === FIX: Safe parseFloat ===
+  const safeParseFloat = (value) => {
+    const num = parseFloat(value);
+    return isNaN(num) ? 0 : num;
+  };
 
-    // Profit
-    const totalRevenue = parseFloat(totalSales.total_revenue);
-    const totalExpenses = parseFloat(expenses.total_expenses);
-    const totalProfit = totalRevenue - totalExpenses;
+  const totalRevenue = safeParseFloat(totalSales.total_revenue);
+  const totalExpenses = safeParseFloat(expenses.total_expenses);
+  const totalProfit = totalRevenue - totalExpenses;
+  const marginPercent = totalRevenue > 0
+    ? ((totalProfit / totalRevenue) * 100).toFixed(2)
+    : '0.00';
 
-    return {
-        sales: {
-            today_count: todaySales.today_count,
-            today_revenue: todaySales.today_revenue,
-            total_count: todaySales.total_count,
-            total_revenue: todaySales.total_revenue,
-        },
-        vouchers,
-        users: {
-            online_users: sessions.online_users,
-        },
-        expenses: {
-            today: expenses.today_expenses,
-            total: expenses.total_expenses,
-        },
-        profit: {
-            total: totalProfit.toFixed(2),
-            margin_percent: totalRevenue > 0
-            ? ((totalProfit / totalRevenue) * 100).toFixed(2): '0.00',
-        },
-    };
+  return {
+    sales: {
+      today_count: todaySales.today_count || 0,
+      today_revenue: todaySales.today_revenue || '0',
+      total_count: totalSales.total_count || 0,
+      total_revenue: totalSales.total_revenue || '0',
+    },
+    vouchers,
+    users: {
+      online_users: sessions.online_users || 0,
+    },
+    expenses: {
+      today: expenses.today_expenses || '0',
+      total: expenses.total_expenses || '0',
+    },
+    profit: {
+      total: totalProfit.toFixed(2),
+      margin_percent: marginPercent,
+    },
+  };
 };
 
 // ===============================================================
