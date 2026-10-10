@@ -11,6 +11,6 @@ router.get('/vouchers', reportController.getVouchers);
 router.get('/revenue', reportController.getRevenue);
 router.get('/sessions', reportController.getSessions);
 router.get('/expenses', reportController.getExpenses);
-router.get('profit-loss', reportController.getProfitLoss);
+router.get('/profit-loss', reportController.getProfitLoss);
 
 module.exports = router;
