@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const reportRoutes = require('./routes/report.routes');
+
 const expenseRoutes = require('./routes/expense.routes');
 const userRoutes = require('./routes/user.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
@@ -14,6 +14,7 @@ const authRoutes = require('./routes/auth.routes');
 const packageRoutes = require('./routes/package.routes');
 const voucherRoutes = require('./routes/voucher.routes');
 const saleRoutes = require('./routes/sale.routes');
+const reportRoutes = require('./routes/report.routes');
 
 const app = express();
 
