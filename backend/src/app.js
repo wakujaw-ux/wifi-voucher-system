@@ -18,7 +18,32 @@ const reportRoutes = require('./routes/report.routes');
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173', // Vite default (React)
+  'http://localhost:3001',
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Ruhusu requests bila origin (mfano: Postman, Thunder Client)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Kwa development, ruhusu origins zote za localhost
+    if (process.env.NODE_ENV === 'development' && origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('CORS: Origin haijaruhusiwa'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 app.use('/api/health', healthRoutes);
