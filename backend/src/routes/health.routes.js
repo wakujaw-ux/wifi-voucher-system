@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/database");
-const { success, error } = require("../utils/response");
 const mikrotikService = require("../services/mikrotik/mikrotik.service");
+const { success, error } = require("../utils/response");
 
-// GET /api/health - Health check
+// GET /api/health — Simple health
 router.get("/", (req, res) => {
   return success(
     res,
@@ -12,12 +12,13 @@ router.get("/", (req, res) => {
       service: "Wifi Voucher Backend",
       version: "1.0.0",
       environment: process.env.NODE_ENV,
+      request_id: req.id,
     },
     "Service is healthy",
   );
 });
 
-// GET /api/health/db - Database connection test
+// GET /api/health/db — Database
 router.get("/db", async (req, res) => {
   try {
     const result = await db.query(
@@ -27,7 +28,7 @@ router.get("/db", async (req, res) => {
       res,
       {
         connected: true,
-        service_time: result.rows[0].current_time,
+        server_time: result.rows[0].current_time,
         postgres_version: result.rows[0].version.split(",")[0],
       },
       "Database connection successful",
@@ -36,20 +37,22 @@ router.get("/db", async (req, res) => {
     console.error("DB Health check failed:", err.message);
     return error(
       res,
-      "Database connection failed:" + err.message,
+      "Database connection failed: " + err.message,
       "DB_CONNECTION_FAILED",
       500,
     );
   }
 });
 
-// GET /api/health/db/tables - Count tables
+// GET /api/health/db/tables
 router.get("/db/tables", async (req, res) => {
   try {
-    const result = await db.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
-    );
-
+    const result = await db.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `);
     return success(
       res,
       {
@@ -63,18 +66,15 @@ router.get("/db/tables", async (req, res) => {
   }
 });
 
-// GET /api/health/db/packages - Sample query
+// GET /api/health/db/packages
 router.get("/db/packages", async (req, res) => {
   try {
     const result = await db.query(
-      "SELECT id, name, duration_minutes FROM packages ORDER BY price",
+      "SELECT id, name, price, duration_minutes FROM packages ORDER BY price ASC",
     );
     return success(
       res,
-      {
-        count: result.rowCount,
-        packages: result.rows,
-      },
+      { count: result.rowCount, packages: result.rows },
       "Packages retrieved",
     );
   } catch (err) {
@@ -94,6 +94,105 @@ router.get("/mikrotik", async (req, res) => {
   } catch (err) {
     return error(res, err.message, "MIKROTIK_ERROR", 500);
   }
+});
+
+// ============================================================
+// GET /api/health/full — Deep health check
+// ============================================================
+router.get("/full", async (req, res) => {
+  const startTime = Date.now();
+
+  const checks = {
+    service: {
+      status: "UP",
+      name: "Wifi Voucher Backend",
+      version: "1.0.0",
+      environment: process.env.NODE_ENV,
+      uptime_seconds: Math.floor(process.uptime()),
+    },
+    database: { status: "UNKNOWN" },
+    mikrotik: { status: "UNKNOWN" },
+    memory: {
+      status: "UP",
+      used_mb: parseFloat(
+        (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2),
+      ),
+      total_mb: parseFloat(
+        (process.memoryUsage().heapTotal / 1024 / 1024).toFixed(2),
+      ),
+      rss_mb: parseFloat((process.memoryUsage().rss / 1024 / 1024).toFixed(2)),
+    },
+  };
+
+  // Database check
+  try {
+    const dbStart = Date.now();
+    await db.query("SELECT 1");
+    checks.database = {
+      status: "UP",
+      response_time_ms: Date.now() - dbStart,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+    };
+  } catch (err) {
+    checks.database = {
+      status: "DOWN",
+      error: err.message,
+    };
+  }
+
+  // MikroTik check
+  try {
+    const mtStart = Date.now();
+    const mtHealth = await mikrotikService.healthCheck();
+    if (mtHealth.online) {
+      checks.mikrotik = {
+        status: "UP",
+        response_time_ms: Date.now() - mtStart,
+        mode: process.env.MIKROTIK_MODE,
+        identity: mtHealth.identity,
+        version: mtHealth.version,
+      };
+    } else {
+      checks.mikrotik = {
+        status: "DOWN",
+        mode: process.env.MIKROTIK_MODE,
+        error: mtHealth.error,
+      };
+    }
+  } catch (err) {
+    checks.mikrotik = {
+      status: "DOWN",
+      error: err.message,
+    };
+  }
+
+  // Overall status
+  const overallStatus =
+    checks.database.status === "UP" && checks.mikrotik.status === "UP"
+      ? "HEALTHY"
+      : checks.database.status === "UP"
+        ? "DEGRADED"
+        : "UNHEALTHY";
+
+  const statusCode =
+    overallStatus === "HEALTHY"
+      ? 200
+      : overallStatus === "DEGRADED"
+        ? 200
+        : 503;
+
+  return res.status(statusCode).json({
+    success: overallStatus !== "UNHEALTHY",
+    message: `System is ${overallStatus}`,
+    data: {
+      status: overallStatus,
+      total_response_time_ms: Date.now() - startTime,
+      checks,
+      request_id: req.id,
+      timestamp: new Date().toISOString(),
+    },
+  });
 });
 
 module.exports = router;
