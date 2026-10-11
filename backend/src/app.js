@@ -1,23 +1,24 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-require('./config/env'); // Environment validation
-const compression = require('compression');
-const requestId = require('./middleware/requestId.middleware');
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+require("./config/env"); // Environment validation
+const compression = require("compression");
+const requestId = require("./middleware/requestId.middleware");
 
-const logger = require('./middleware/logger.middleware');
-const { globalLimiter } = require('./middleware/rateLimit.middleware');
+const logger = require("./middleware/logger.middleware");
+const { globalLimiter } = require("./middleware/rateLimit.middleware");
 
-const expenseRoutes = require('./routes/expense.routes');
-const userRoutes = require('./routes/user.routes');
-const dashboardRoutes = require('./routes/dashboard.routes');
-const sessionRoutes = require('./routes/session.routes');
-const healthRoutes = require('./routes/health.routes');
-const authRoutes = require('./routes/auth.routes');
-const packageRoutes = require('./routes/package.routes');
-const voucherRoutes = require('./routes/voucher.routes');
-const saleRoutes = require('./routes/sale.routes');
-const reportRoutes = require('./routes/report.routes');
+const expenseRoutes = require("./routes/expense.routes");
+const userRoutes = require("./routes/user.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
+const sessionRoutes = require("./routes/session.routes");
+const healthRoutes = require("./routes/health.routes");
+const authRoutes = require("./routes/auth.routes");
+const packageRoutes = require("./routes/package.routes");
+const voucherRoutes = require("./routes/voucher.routes");
+const saleRoutes = require("./routes/sale.routes");
+const reportRoutes = require("./routes/report.routes");
+const { AppError } = require("./utils/AppError");
 
 const app = express();
 
@@ -29,30 +30,35 @@ app.use(requestId);
 
 // CORS
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://localhost:3001',
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:3001",
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    if (process.env.NODE_ENV === 'development' && origin.startsWith('http://localhost:')) {
-      return callback(null, true);
-    }
-    callback(new Error('CORS: Origin haijaruhusiwa'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (
+        process.env.NODE_ENV === "development" &&
+        origin.startsWith("http://localhost:")
+      ) {
+        return callback(null, true);
+      }
+      callback(new Error("CORS: Origin haijaruhusiwa"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 
 // Compression
 app.use(compression());
 
 // Body parser
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: "1mb" }));
 
 // Logger
 app.use(logger);
@@ -61,23 +67,23 @@ app.use(logger);
 app.use(globalLimiter);
 
 // Routes
-app.use('/api/health', healthRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/packages', packageRoutes);
-app.use('/api/vouchers', voucherRoutes);
-app.use('/api/sales', saleRoutes);
-app.use('/api/sessions', sessionRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/expenses', expenseRoutes);
-app.use('/api/reports', reportRoutes);
+app.use("/api/health", healthRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/packages", packageRoutes);
+app.use("/api/vouchers", voucherRoutes);
+app.use("/api/sales", saleRoutes);
+app.use("/api/sessions", sessionRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/expenses", expenseRoutes);
+app.use("/api/reports", reportRoutes);
 
 // Root
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: 'Wifi Voucher Backend',
-    docs: '/api/health',
+    message: "Wifi Voucher Backend",
+    docs: "/api/health",
   });
 });
 
@@ -85,37 +91,58 @@ app.get('/', (req, res) => {
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found',
-    code: 'ROUTE_NOT_FOUND',
+    message: "Route not found",
+    code: "ROUTE_NOT_FOUND",
   });
 });
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('❌ Error:', err.message);
-  
-  // Kama ni CORS error
-  if (err.message.includes('CORS')) {
+  // Log kwa request ID
+  console.error(`❌ [${req.id}] ${err.name}: ${err.message}`);
+  if (process.env.NODE_ENV === "development" && err.stack) {
+    console.error(err.stack);
+  }
+
+  // AppError (custom)
+  if (err instanceof AppError) {
+    return res.status(err.status).json({
+      success: false,
+      message: err.message,
+      code: err.code,
+      request_id: req.id,
+    });
+  }
+
+  // CORS error
+  if (err.message && err.message.includes("CORS")) {
     return res.status(403).json({
       success: false,
       message: err.message,
-      code: 'CORS_ERROR',
+      code: "CORS_ERROR",
+      request_id: req.id,
     });
   }
-  
-  // Kama ni kosa la JSON parser
-  if (err.type === 'entity.parse.failed') {
+
+  // JSON parse error
+  if (err.type === "entity.parse.failed") {
     return res.status(400).json({
       success: false,
-      message: 'JSON si sahihi',
-      code: 'INVALID_JSON',
+      message: "JSON si sahihi",
+      code: "INVALID_JSON",
+      request_id: req.id,
     });
   }
-  
+
+  // Default
   res.status(err.status || 500).json({
     success: false,
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error',
-    code: err.code || 'INTERNAL_ERROR',
+    message:
+      process.env.NODE_ENV === "development"
+        ? err.message
+        : "Internal Server Error",
+    code: err.code || "INTERNAL_ERROR",
+    request_id: req.id,
   });
 });
 
@@ -127,24 +154,24 @@ const server = app.listen(PORT, () => {
   console.log(`📚 Try: http://localhost:${PORT}/api/health`);
 });
 
-server.on('error', (err) => {
-  console.error('SERVER ERROR:', err);
+server.on("error", (err) => {
+  console.error("SERVER ERROR:", err);
 });
 
 // Graceful shutdown
 const shutdown = (signal) => {
   console.log(`\n⚠️  Received ${signal}. Shutting down gracefully...`);
   server.close(() => {
-    console.log('✅ HTTP server closed');
+    console.log("✅ HTTP server closed");
     process.exit(0);
   });
-  
+
   // Force shutdown baada ya sekunde 10
   setTimeout(() => {
-    console.error('❌ Forced shutdown after 10s');
+    console.error("❌ Forced shutdown after 10s");
     process.exit(1);
   }, 10000);
 };
 
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));

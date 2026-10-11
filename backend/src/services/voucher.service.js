@@ -1,7 +1,7 @@
-const db = require('../config/database');
-const { generateBulkCodes } = require('../utils/voucherCode');
-const hotspotService = require('./mikrotik/hotspot.service');
-const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
+const db = require("../config/database");
+const { generateBulkCodes } = require("../utils/voucherCode");
+const hotspotService = require("./mikrotik/hotspot.service");
+const { parsePagination, buildPaginationMeta } = require("../utils/pagination");
 
 // ============================================================
 // GENERATE VOUCHERS (Batch + Vouchers)
@@ -11,13 +11,13 @@ const generateVouchers = async (data, userId) => {
 
   // 1. Angalia package ipo
   const pkgResult = await db.query(
-    'SELECT id, site_id, name, price, duration_minutes, validity_days, speed_limit_mbps FROM packages WHERE id = $1 AND deleted_at IS NULL',
-    [package_id]
+    "SELECT id, site_id, name, price, duration_minutes, validity_days, speed_limit_mbps FROM packages WHERE id = $1 AND deleted_at IS NULL",
+    [package_id],
   );
 
   if (pkgResult.rowCount === 0) {
-    const err = new Error('Package haipo');
-    err.code = 'PACKAGE_NOT_FOUND';
+    const err = new Error("Package haipo");
+    err.code = "PACKAGE_NOT_FOUND";
     err.status = 404;
     throw err;
   }
@@ -28,14 +28,14 @@ const generateVouchers = async (data, userId) => {
   const client = await db.getClient();
 
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
     // 2a. Unda batch
     const batchResult = await client.query(
       `INSERT INTO voucher_batches (site_id, package_id, quantity, prefix, notes, created_by)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, site_id, package_id, quantity, prefix, notes, created_by, created_at`,
-      [site_id, package_id, quantity, prefix || null, notes || null, userId]
+      [site_id, package_id, quantity, prefix || null, notes || null, userId],
     );
 
     const batch = batchResult.rows[0];
@@ -49,7 +49,9 @@ const generateVouchers = async (data, userId) => {
     let paramIndex = 1;
 
     for (const code of codes) {
-      values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7})`);
+      values.push(
+        `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7})`,
+      );
       params.push(
         batch.id,
         package_id,
@@ -58,20 +60,20 @@ const generateVouchers = async (data, userId) => {
         pkg.price,
         pkg.duration_minutes,
         pkg.speed_limit_mbps,
-        pkg.validity_days
+        pkg.validity_days,
       );
       paramIndex += 8;
     }
 
     const insertSql = `
       INSERT INTO vouchers (batch_id, package_id, site_id, code, price, duration_minutes, speed_limit_mbps, validity_days)
-      VALUES ${values.join(', ')}
+      VALUES ${values.join(", ")}
       RETURNING id, code, status, mikrotik_sync, price, duration_minutes, speed_limit_mbps, validity_days, created_at
     `;
 
     const vouchersResult = await client.query(insertSql, params);
 
-        await client.query('COMMIT');
+    await client.query("COMMIT");
 
     // Sync vouchers to MikroTik hotspot
     const syncedVouchers = [];
@@ -83,26 +85,26 @@ const generateVouchers = async (data, userId) => {
           `UPDATE vouchers
            SET mikrotik_sync = 'SYNCED', mikrotik_user = $1, status = 'AVAILABLE', updated_at = NOW()
            WHERE id = $2`,
-          [voucher.code, voucher.id]
+          [voucher.code, voucher.id],
         );
 
         syncedVouchers.push({
           ...voucher,
-          mikrotik_sync: 'SYNCED',
+          mikrotik_sync: "SYNCED",
           mikrotik_user: voucher.code,
-          status: 'AVAILABLE',
+          status: "AVAILABLE",
         });
       } else {
         await db.query(
           `UPDATE vouchers
            SET mikrotik_sync = 'FAILED', updated_at = NOW()
            WHERE id = $1`,
-          [voucher.id]
+          [voucher.id],
         );
 
         syncedVouchers.push({
           ...voucher,
-          mikrotik_sync: 'FAILED',
+          mikrotik_sync: "FAILED",
           error: syncResult.error,
         });
       }
@@ -111,12 +113,13 @@ const generateVouchers = async (data, userId) => {
     return {
       batch,
       vouchers: syncedVouchers,
-      synced_count: syncedVouchers.filter((v) => v.mikrotik_sync === 'SYNCED').length,
-      failed_count: syncedVouchers.filter((v) => v.mikrotik_sync === 'FAILED').length,
+      synced_count: syncedVouchers.filter((v) => v.mikrotik_sync === "SYNCED")
+        .length,
+      failed_count: syncedVouchers.filter((v) => v.mikrotik_sync === "FAILED")
+        .length,
     };
-
   } catch (err) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
     throw err;
   } finally {
     client.release();
@@ -130,7 +133,7 @@ const getAllVouchers = async (filters = {}) => {
   const { site_id, package_id, batch_id, status } = filters;
   const { limit, offset } = parsePagination(filters);
 
-  let whereSql = 'WHERE 1 = 1';
+  let whereSql = "WHERE 1 = 1";
   const params = [];
   let paramIndex = 1;
 
@@ -179,7 +182,12 @@ const getAllVouchers = async (filters = {}) => {
 
   return {
     vouchers: result.rows,
-    pagination: buildPaginationMeta({ total, limit, offset, count: result.rowCount }),
+    pagination: buildPaginationMeta({
+      total,
+      limit,
+      offset,
+      count: result.rowCount,
+    }),
   };
 };
 
@@ -192,8 +200,8 @@ const getVoucherById = async (id) => {
   const result = await db.query(sql, [id]);
 
   if (result.rowCount === 0) {
-    const err = new Error('Voucher haipo');
-    err.code = 'VOUCHER_NOT_FOUND';
+    const err = new Error("Voucher haipo");
+    err.code = "VOUCHER_NOT_FOUND";
     err.status = 404;
     throw err;
   }
@@ -210,8 +218,8 @@ const getVoucherByCode = async (code) => {
   const result = await db.query(sql, [code]);
 
   if (result.rowCount === 0) {
-    const err = new Error('Voucher haipo');
-    err.code = 'VOUCHER_NOT_FOUND';
+    const err = new Error("Voucher haipo");
+    err.code = "VOUCHER_NOT_FOUND";
     err.status = 404;
     throw err;
   }
@@ -225,7 +233,7 @@ const getVoucherByCode = async (code) => {
 const getVoucherStats = async (filters = {}) => {
   const { site_id, package_id } = filters;
 
-  let sql = 'SELECT status, COUNT(*) as count FROM vouchers WHERE 1 = 1';
+  let sql = "SELECT status, COUNT(*) as count FROM vouchers WHERE 1 = 1";
   const params = [];
   let paramIndex = 1;
 
@@ -241,7 +249,7 @@ const getVoucherStats = async (filters = {}) => {
     paramIndex++;
   }
 
-  sql += ' GROUP BY status ORDER BY status';
+  sql += " GROUP BY status ORDER BY status";
 
   const result = await db.query(sql, params);
 
@@ -268,20 +276,22 @@ const getVoucherStats = async (filters = {}) => {
 // ============================================================
 // REVOKE VOUCHER
 // ============================================================
-const revokeVoucher  = async (id, userId, reason) => {
+const revokeVoucher = async (id, userId, reason) => {
   const voucher = await getVoucherById(id);
 
   // Hakuna haja ya ku-revoke voucher ambayo tayari ime-revoked au ime-used au ime-expired
-  if (voucher.status === 'USED' || voucher.status === 'EXPIRED') {
-    const err = new Error(`Voucher haiwezi kurevoke. status: ${voucher.status}`);
-    err.code = 'VOUCHER_NOT_REVOKABLE';
+  if (voucher.status === "USED" || voucher.status === "EXPIRED") {
+    const err = new Error(
+      `Voucher haiwezi kurevoke. status: ${voucher.status}`,
+    );
+    err.code = "VOUCHER_NOT_REVOKABLE";
     err.status = 400;
     throw err;
   }
 
-  if (voucher.status === 'REVOKED') {
-    const err = new Error('Voucher tayari ime-revoked');
-    err.code = 'VOUCHER_ALREADY_REVOKED';
+  if (voucher.status === "REVOKED") {
+    const err = new Error("Voucher tayari ime-revoked");
+    err.code = "VOUCHER_ALREADY_REVOKED";
     err.status = 400;
     throw err;
   }
@@ -306,9 +316,6 @@ const markVoucherAvailable = async (id, mikrotikUser) => {
 
   return result.rows[0];
 };
-  
-
-
 
 module.exports = {
   generateVouchers,
