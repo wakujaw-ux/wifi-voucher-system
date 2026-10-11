@@ -22,6 +22,9 @@ const { AppError } = require("./utils/AppError");
 
 const app = express();
 
+// Zima X-powered-by
+app.disable("x-powered-by");
+
 // Security
 app.use(helmet());
 
