@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { generateBulkCodes } = require('../utils/voucherCode');
 const hotspotService = require('./mikrotik/hotspot.service');
+const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 
 // ============================================================
 // GENERATE VOUCHERS (Batch + Vouchers)
@@ -126,49 +127,59 @@ const generateVouchers = async (data, userId) => {
 // GET ALL VOUCHERS
 // ============================================================
 const getAllVouchers = async (filters = {}) => {
-  const { site_id, package_id, batch_id, status, limit = 100, offset = 0 } = filters;
+  const { site_id, package_id, batch_id, status } = filters;
+  const { limit, offset } = parsePagination(filters);
 
-  let sql = `SELECT id, batch_id, package_id, site_id, code, status, mikrotik_sync, mikrotik_user, price, duration_minutes, speed_limit_mbps, validity_days, sold_at, activated_at, expires_at, used_at, created_at
-             FROM vouchers WHERE 1 = 1`;
+  let whereSql = 'WHERE 1 = 1';
   const params = [];
   let paramIndex = 1;
 
   if (site_id) {
-    sql += ` AND site_id = $${paramIndex}`;
+    whereSql += ` AND site_id = $${paramIndex}`;
     params.push(site_id);
     paramIndex++;
   }
 
   if (package_id) {
-    sql += ` AND package_id = $${paramIndex}`;
+    whereSql += ` AND package_id = $${paramIndex}`;
     params.push(package_id);
     paramIndex++;
   }
 
   if (batch_id) {
-    sql += ` AND batch_id = $${paramIndex}`;
+    whereSql += ` AND batch_id = $${paramIndex}`;
     params.push(batch_id);
     paramIndex++;
   }
 
   if (status) {
-    sql += ` AND status = $${paramIndex}`;
+    whereSql += ` AND status = $${paramIndex}`;
     params.push(status);
     paramIndex++;
   }
 
-  sql += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-  params.push(parseInt(limit, 10), parseInt(offset, 10));
+  // Count total
+  const countSql = `SELECT COUNT(*)::int AS total FROM vouchers ${whereSql}`;
+  const countResult = await db.query(countSql, params);
+  const total = countResult.rows[0].total;
+
+  // Pata data
+  const sql = `
+    SELECT id, batch_id, package_id, site_id, code, status, mikrotik_sync, mikrotik_user,
+           price, duration_minutes, speed_limit_mbps, validity_days,
+           sold_at, activated_at, expires_at, used_at, created_at
+    FROM vouchers
+    ${whereSql}
+    ORDER BY created_at DESC
+    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+  `;
+  params.push(limit, offset);
 
   const result = await db.query(sql, params);
 
-  // Count total
-  const countSql = 'SELECT COUNT(*) as total FROM vouchers WHERE batch_id = $1';
-  const countParams = batch_id ? [batch_id] : null;
-
   return {
     vouchers: result.rows,
-    count: result.rowCount,
+    pagination: buildPaginationMeta({ total, limit, offset, count: result.rowCount }),
   };
 };
 
