@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 require('./config/env'); // Environment validation
+const compression = require('compression');
+const requestId = require('./middleware/requestId.middleware');
 
 const logger = require('./middleware/logger.middleware');
 const { globalLimiter } = require('./middleware/rateLimit.middleware');
@@ -21,6 +23,9 @@ const app = express();
 
 // Security
 app.use(helmet());
+
+// Request ID
+app.use(requestId);
 
 // CORS
 const allowedOrigins = [
@@ -42,6 +47,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Compression
+app.use(compression());
 
 // Body parser
 app.use(express.json({ limit: '1mb' }));
