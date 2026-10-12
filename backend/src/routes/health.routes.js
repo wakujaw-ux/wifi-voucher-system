@@ -3,6 +3,9 @@ const router = express.Router();
 const db = require("../config/database");
 const mikrotikService = require("../services/mikrotik/mikrotik.service");
 const { success, error } = require("../utils/response");
+const { expireVouchers } = require('../jobs/voucherExpiry.job');
+const { retryFailedSyncs } = require('../jobs/mikrotikSyncRetry.job');
+const { authenticate, requireRole } = require('../middleware/auth.middleware');
 
 // GET /api/health — Simple health
 router.get("/", (req, res) => {
@@ -193,6 +196,30 @@ router.get("/full", async (req, res) => {
       timestamp: new Date().toISOString(),
     },
   });
+});
+
+// ============================================================
+// MANUAL JOB TRIGGERS (ADMIN only)
+// ============================================================
+
+// POST /api/health/jobs/expire-vouchers
+router.post('/jobs/expire-vouchers', authenticate, requireRole('ADMIN', 'SUPER_ADMIN'), async (req, res) => {
+  try {
+    const result = await expireVouchers();
+    return success(res, result, `Vouchers ${result.expired_count} zime-expire`);
+  } catch (err) {
+    return error(res, err.message, 'JOB_FAILED', 500);
+  }
+});
+
+// POST /api/health/jobs/retry-sync
+router.post('/jobs/retry-sync', authenticate, requireRole('ADMIN', 'SUPER_ADMIN'), async (req, res) => {
+  try {
+    const result = await retryFailedSyncs();
+    return success(res, result, `Attempted ${result.attempted}, synced ${result.synced}`);
+  } catch (err) {
+    return error(res, err.message, 'JOB_FAILED', 500);
+  }
 });
 
 module.exports = router;
