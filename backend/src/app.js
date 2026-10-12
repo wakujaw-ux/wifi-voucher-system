@@ -7,6 +7,8 @@ const requestId = require("./middleware/requestId.middleware");
 
 const logger = require("./middleware/logger.middleware");
 const { globalLimiter } = require("./middleware/rateLimit.middleware");
+const { AppError } = require("./utils/AppError");
+const { startAllJobs } = require('./jobs');
 
 const expenseRoutes = require("./routes/expense.routes");
 const userRoutes = require("./routes/user.routes");
@@ -18,7 +20,7 @@ const packageRoutes = require("./routes/package.routes");
 const voucherRoutes = require("./routes/voucher.routes");
 const saleRoutes = require("./routes/sale.routes");
 const reportRoutes = require("./routes/report.routes");
-const { AppError } = require("./utils/AppError");
+
 
 const app = express();
 
@@ -156,6 +158,10 @@ const server = app.listen(PORT, () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
   console.log(`📚 Try: http://localhost:${PORT}/api/health`);
 });
+
+// Anzisha background jobs
+startAllJobs();
+
 
 server.on("error", (err) => {
   console.error("SERVER ERROR:", err);
