@@ -53,9 +53,10 @@ const Login = () => {
           <div className="bg-primary-100 p-4 rounded-full mb-4">
             <Wifi className="w-10 h-10 text-primary-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">
+          <h1 className="text-4xl font-bold text-blue-900">BUILD Tz</h1>
+          <h2 className="text-2xl font-bold text-gray-800">
             Wifi Voucher System
-          </h1>
+          </h2>
           <p className="text-gray-500 text-sm mt-1">
             Ingia kwenye dashboard yako
           </p>
@@ -111,9 +112,9 @@ const Login = () => {
             {loading ? "Inaingia..." : "Ingia"}
           </button>
         </form>
-
+    
         <p className="text-center text-xs text-gray-400 mt-6">
-          Wifi Voucher System © {new Date().getFullYear()}
+          BUILD TZ (Wifi Voucher System © {new Date().getFullYear()})
         </p>
       </div>
     </div>
