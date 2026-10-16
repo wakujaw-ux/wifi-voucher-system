@@ -268,6 +268,9 @@ const Vouchers = () => {
                   <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
                     Code
                   </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    Package
+                  </th>
                   <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">
                     Bei
                   </th>
@@ -292,6 +295,9 @@ const Vouchers = () => {
                       <span className="font-mono font-medium text-gray-800">
                         {v.code}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-gray-700 text-sm">
+                      {v.package_name || "-"}
                     </td>
                     <td className="px-6 py-4 text-right text-gray-600">
                       TZS {parseFloat(v.price).toLocaleString()}
