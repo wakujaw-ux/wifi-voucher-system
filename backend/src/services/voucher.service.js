@@ -129,7 +129,7 @@ const generateVouchers = async (data, userId) => {
 // ============================================================
 // GET ALL VOUCHERS
 // ============================================================
-const getAllVouchers = async (filters = {}) => {
+/*const getAllVouchers = async (filters = {}) => {
   const { site_id, package_id, batch_id, status } = filters;
   const { limit, offset } = parsePagination(filters);
 
@@ -188,6 +188,58 @@ const getAllVouchers = async (filters = {}) => {
       offset,
       count: result.rowCount,
     }),
+  };
+};*/
+
+const getAllVouchers = async (filters = {}) => {
+  const { site_id, package_id, batch_id, status, limit = 100, offset = 0 } = filters;
+
+  let sql = `
+    SELECT 
+      v.id, v.batch_id, v.package_id, v.site_id, v.code, v.status, 
+      v.mikrotik_sync, v.mikrotik_user, v.price, v.duration_minutes, 
+      v.speed_limit_mbps, v.validity_days, v.sold_at, v.activated_at, 
+      v.expires_at, v.used_at, v.created_at,
+      p.name AS package_name
+    FROM vouchers v
+    JOIN packages p ON p.id = v.package_id
+    WHERE 1 = 1
+  `;
+  const params = [];
+  let paramIndex = 1;
+
+  if (site_id) {
+    sql += ` AND v.site_id = $${paramIndex}`;
+    params.push(site_id);
+    paramIndex++;
+  }
+
+  if (package_id) {
+    sql += ` AND v.package_id = $${paramIndex}`;
+    params.push(package_id);
+    paramIndex++;
+  }
+
+  if (batch_id) {
+    sql += ` AND v.batch_id = $${paramIndex}`;
+    params.push(batch_id);
+    paramIndex++;
+  }
+
+  if (status) {
+    sql += ` AND v.status = $${paramIndex}`;
+    params.push(status);
+    paramIndex++;
+  }
+
+  sql += ` ORDER BY v.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+  params.push(parseInt(limit, 10), parseInt(offset, 10));
+
+  const result = await db.query(sql, params);
+
+  return {
+    vouchers: result.rows,
+    count: result.rowCount,
   };
 };
 
