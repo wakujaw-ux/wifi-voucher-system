@@ -30,19 +30,21 @@ const Packages = () => {
   const canWrite = ["ADMIN", "SUPER_ADMIN"].includes(user?.role);
 
   // Pata packages
-  const fetchPackages = async () => {
-    setLoading(true);
-    try {
-      const response = await packageApi.getAll();
-      setPackages(response.data.packages || []);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Imeshindwa kupata packages");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchPackages = async () => {
+      setLoading(true);
+      try {
+        const response = await packageApi.getAll();
+        setPackages(response.data.packages || []);
+      } catch (err) {
+        toast.error(
+          err.response?.data?.message || "Imeshindwa kupata packages",
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchPackages();
   }, []);
 
