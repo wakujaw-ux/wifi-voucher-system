@@ -192,7 +192,14 @@ const generateVouchers = async (data, userId) => {
 };*/
 
 const getAllVouchers = async (filters = {}) => {
-  const { site_id, package_id, batch_id, status, limit = 100, offset = 0 } = filters;
+  const {
+    site_id,
+    package_id,
+    batch_id,
+    status,
+    limit = 100,
+    offset = 0,
+  } = filters;
 
   let sql = `
     SELECT 
