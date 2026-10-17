@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Plus,
   Search,
-  Filter,
   Ticket,
   RefreshCw,
-  Eye,
   ShoppingCart,
   Ban,
 } from "lucide-react";
@@ -60,7 +58,7 @@ const Vouchers = () => {
   const canRevoke = ["ADMIN", "SUPER_ADMIN"].includes(user?.role);
 
   // Pata data
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const filters = { limit: 100 };
@@ -83,11 +81,11 @@ const Vouchers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, packageFilter]);
 
   useEffect(() => {
     fetchData();
-  }, [statusFilter, packageFilter]);
+  }, [fetchData]);
 
   // Filter kwa search (client-side)
   const filteredVouchers = vouchers.filter((v) =>

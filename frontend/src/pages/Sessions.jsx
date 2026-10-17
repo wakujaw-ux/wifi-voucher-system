@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   RefreshCw,
   Users,
@@ -7,7 +7,6 @@ import {
   WifiOff,
   LogOut,
   Activity,
-  Smartphone,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { sessionApi } from "../api/session.api";
@@ -18,31 +17,26 @@ const AUTO_REFRESH_SECONDS = 30;
 
 const Sessions = () => {
   const { user } = useAuth();
-
   const [activeSessions, setActiveSessions] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [countdown, setCountdown] = useState(AUTO_REFRESH_SECONDS);
-
   const [disconnectTarget, setDisconnectTarget] = useState(null);
   const [disconnecting, setDisconnecting] = useState(false);
 
   const canDisconnect = ["ADMIN", "SUPER_ADMIN", "OPERATOR"].includes(
     user?.role,
   );
-
   const countdownRef = useRef(AUTO_REFRESH_SECONDS);
 
-  // Pata data
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [sessionsRes, statsRes] = await Promise.all([
         sessionApi.getActive(),
         sessionApi.getStats(),
       ]);
-
       setActiveSessions(sessionsRes.data.sessions || []);
       setStats(statsRes.data.stats);
     } catch (err) {
@@ -52,27 +46,23 @@ const Sessions = () => {
       countdownRef.current = AUTO_REFRESH_SECONDS;
       setCountdown(AUTO_REFRESH_SECONDS);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
-  // Auto-refresh kila sekunde 30
   useEffect(() => {
     if (!autoRefresh) return;
-
     const interval = setInterval(() => {
       countdownRef.current -= 1;
       setCountdown(countdownRef.current);
-
       if (countdownRef.current <= 0) {
         fetchData();
       }
     }, 1000);
-
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [autoRefresh, fetchData]);
 
   // Format muda
   const formatDuration = (seconds) => {
