@@ -102,11 +102,14 @@ const Reports = () => {
     setAppliedFilters({});
   };
 
-  const formatCurrency = (value) =>
-    `TZS ${parseFloat(value || 0).toLocaleString("en-US", {
+  const formatCurrency = (value) => {
+    const num = parseFloat(value);
+    const safe = isNaN(num) ? 0 : num;
+    return `TZS ${safe.toLocaleString("en-US", {
       maximumFractionDigits: 0,
     })}`;
-
+  };
+  
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("sw-TZ", {
@@ -464,9 +467,15 @@ const VouchersReport = ({ data }) => {
 // REVENUE REPORT
 // ============================================================
 const RevenueReport = ({ data, formatCurrency }) => {
-  const pieData = (data.by_method || []).map((m) => ({
+  // Defensive checks
+  const safeData = {
+    total: data?.total || { total_transactions: 0, total_revenue: "0" },
+    by_method: data?.by_method || [],
+  };
+
+  const pieData = safeData.by_method.map((m) => ({
     name: m.method,
-    value: parseFloat(m.revenue),
+    value: parseFloat(m.revenue || 0),
   }));
 
   return (
@@ -474,14 +483,14 @@ const RevenueReport = ({ data, formatCurrency }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <SummaryCard
           label="Jumla ya Miamala"
-          value={data.total.total_transactions}
+          value={safeData.total.total_transactions || 0}
           icon={ShoppingCart}
           color="text-blue-600"
           bgColor="bg-blue-50"
         />
         <SummaryCard
           label="Jumla ya Mapato"
-          value={formatCurrency(data.total.total_revenue)}
+          value={formatCurrency(safeData.total.total_revenue || 0)}
           icon={DollarSign}
           color="text-green-600"
           bgColor="bg-green-50"
@@ -522,36 +531,42 @@ const RevenueReport = ({ data, formatCurrency }) => {
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
         <h3 className="font-medium text-gray-800 mb-4">Maelezo kwa Njia</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-gray-100">
-              <tr>
-                <th className="text-left py-2 text-xs font-medium text-gray-500 uppercase">
-                  Njia
-                </th>
-                <th className="text-right py-2 text-xs font-medium text-gray-500 uppercase">
-                  Miamala
-                </th>
-                <th className="text-right py-2 text-xs font-medium text-gray-500 uppercase">
-                  Mapato
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {(data.by_method || []).map((m) => (
-                <tr key={m.method}>
-                  <td className="py-3 text-gray-800">{m.method}</td>
-                  <td className="py-3 text-right text-gray-600">
-                    {m.transaction_count}
-                  </td>
-                  <td className="py-3 text-right font-medium text-gray-800">
-                    {formatCurrency(m.revenue)}
-                  </td>
+        {safeData.by_method.length === 0 ? (
+          <p className="text-gray-500 text-sm py-4 text-center">
+            Hakuna miamala bado
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-gray-100">
+                <tr>
+                  <th className="text-left py-2 text-xs font-medium text-gray-500 uppercase">
+                    Njia
+                  </th>
+                  <th className="text-right py-2 text-xs font-medium text-gray-500 uppercase">
+                    Miamala
+                  </th>
+                  <th className="text-right py-2 text-xs font-medium text-gray-500 uppercase">
+                    Mapato
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {safeData.by_method.map((m) => (
+                  <tr key={m.method}>
+                    <td className="py-3 text-gray-800">{m.method}</td>
+                    <td className="py-3 text-right text-gray-600">
+                      {m.transaction_count}
+                    </td>
+                    <td className="py-3 text-right font-medium text-gray-800">
+                      {formatCurrency(m.revenue)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -561,8 +576,18 @@ const RevenueReport = ({ data, formatCurrency }) => {
 // PROFIT & LOSS REPORT
 // ============================================================
 const ProfitLossReport = ({ data, formatCurrency }) => {
-  const isProfit = data.status === "PROFIT";
-  const isLoss = data.status === "LOSS";
+  // Defensive checks
+  const safeData = {
+    status: data?.status || "BREAK_EVEN",
+    profit: data?.profit || "0",
+    revenue: data?.revenue || "0",
+    expenses: data?.expenses || "0",
+    margin_percent: data?.margin_percent || "0.00",
+    period: data?.period || { from_date: "beginning", to_date: "now" },
+  };
+
+  const isProfit = safeData.status === "PROFIT";
+  const isLoss = safeData.status === "LOSS";
 
   const statusColor = isProfit
     ? "text-green-600"
@@ -588,10 +613,10 @@ const ProfitLossReport = ({ data, formatCurrency }) => {
               {isProfit ? "Faida" : isLoss ? "Hasara" : "Break Even"}
             </p>
             <p className={`text-3xl font-bold mt-1 ${statusColor}`}>
-              {formatCurrency(data.profit)}
+              {formatCurrency(safeData.profit)}
             </p>
             <p className="text-xs text-gray-500 mt-2">
-              Margin: {data.margin_percent}%
+              Margin: {safeData.margin_percent}%
             </p>
           </div>
           <StatusIcon className={`w-12 h-12 ${statusColor}`} />
@@ -605,7 +630,7 @@ const ProfitLossReport = ({ data, formatCurrency }) => {
             <div>
               <p className="text-sm text-gray-500">Mapato</p>
               <p className="text-2xl font-bold text-green-600 mt-1">
-                {formatCurrency(data.revenue)}
+                {formatCurrency(safeData.revenue)}
               </p>
             </div>
             <div className="bg-green-50 p-3 rounded-lg">
@@ -619,7 +644,7 @@ const ProfitLossReport = ({ data, formatCurrency }) => {
             <div>
               <p className="text-sm text-gray-500">Matumizi</p>
               <p className="text-2xl font-bold text-red-600 mt-1">
-                {formatCurrency(data.expenses)}
+                {formatCurrency(safeData.expenses)}
               </p>
             </div>
             <div className="bg-red-50 p-3 rounded-lg">
@@ -631,8 +656,8 @@ const ProfitLossReport = ({ data, formatCurrency }) => {
 
       {/* Period */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-sm text-gray-600">
-        <span className="font-medium">Kipindi:</span> {data.period.from_date} –{" "}
-        {data.period.to_date}
+        <span className="font-medium">Kipindi:</span>{" "}
+        {safeData.period.from_date} – {safeData.period.to_date}
       </div>
     </div>
   );
