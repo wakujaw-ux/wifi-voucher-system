@@ -20,7 +20,7 @@ const packageRoutes = require("./routes/package.routes");
 const voucherRoutes = require("./routes/voucher.routes");
 const saleRoutes = require("./routes/sale.routes");
 const reportRoutes = require("./routes/report.routes");
-
+const settingsRoutes = require('./routes/settings.routes');
 
 const app = express();
 
@@ -82,6 +82,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/reports", reportRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Root
 app.get("/", (req, res) => {
