@@ -6,8 +6,10 @@ import {
   RefreshCw,
   ShoppingCart,
   Ban,
+  Printer,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import { voucherApi } from "../api/voucher.api";
 import { packageApi } from "../api/package.api";
 import Modal from "../components/Modal";
@@ -38,6 +40,7 @@ const STATUS_COLORS = {
 
 const Vouchers = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [vouchers, setVouchers] = useState([]);
   const [packages, setPackages] = useState([]);
@@ -172,6 +175,28 @@ const Vouchers = () => {
             Refresh
           </button>
 
+          <div className="flex gap-2">
+            <button
+              onClick={fetchData}
+              disabled={loading}
+              className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </button>
+
+            {/* ONGEZA HII */}
+            <button
+              onClick={() => navigate("/vouchers/print?status=AVAILABLE")}
+              className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition"
+              title="Chapisha vocha zilizopo"
+            >
+              <Printer className="w-4 h-4" />
+              Chapisha
+            </button>
+          </div>
           {canGenerate && (
             <button
               onClick={() => setShowGenerateModal(true)}

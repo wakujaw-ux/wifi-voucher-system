@@ -32,3 +32,43 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ============================================================
+   PRINT STYLES
+   ============================================================ */
+@media print {
+  /* Ficha vitu visivyohitajika */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Weka background nyeupe */
+  body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Print container */
+  .print-container {
+    padding: 0 !important;
+  }
+
+  /* Kila voucher card isivunjike kati */
+  .voucher-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Rangi ziwe black na white */
+  .voucher-card {
+    border: 2px dashed #333 !important;
+    background: white !important;
+  }
+
+  /* Ukubwa wa ukurasa A4 */
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+}

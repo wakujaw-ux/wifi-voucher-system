@@ -13,6 +13,7 @@ import Users from "./pages/Users";
 import Reports from "./pages/Reports";
 import Expenses from "./pages/Expenses";
 import Settings from "./pages/Settings";
+import PrintVouchers from "./pages/PrintVouchers";
 
 function App() {
   return (
@@ -22,6 +23,16 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Login />} />
+
+          {/* Print — bila Layout */}
+          <Route
+            path="/vouchers/print"
+            element={
+              <ProtectedRoute>
+                <PrintVouchers />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected Routes with Layout */}
           <Route

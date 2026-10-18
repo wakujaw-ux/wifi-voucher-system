@@ -106,6 +106,12 @@ const PrintVouchers = () => {
               ))}
             </select>
 
+            
+    <div className="flex items-center gap-2 text-sm text-gray-500 ml-auto">
+      <Eye className="w-4 h-4" />
+      <span>{vouchers.length} vocha</span>
+    </div>
+
             <div className="flex items-center gap-2 text-sm text-gray-500 ml-auto">
               <Eye className="w-4 h-4" />
               <span>Preview chini</span>
