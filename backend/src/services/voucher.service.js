@@ -68,7 +68,7 @@ const generateVouchers = async (data, userId) => {
     const insertSql = `
       INSERT INTO vouchers (batch_id, package_id, site_id, code, price, duration_minutes, speed_limit_mbps, validity_days)
       VALUES ${values.join(", ")}
-      RETURNING id, code, status, mikrotik_sync, price, duration_minutes, speed_limit_mbps, validity_days, created_at
+      RETURNING id, batch_id, package_id, site_id, code, status, mikrotik_sync, price, duration_minutes, speed_limit_mbps, validity_days, created_at
     `;
 
     const vouchersResult = await client.query(insertSql, params);
@@ -129,126 +129,6 @@ const generateVouchers = async (data, userId) => {
 // ============================================================
 // GET ALL VOUCHERS
 // ============================================================
-/*const getAllVouchers = async (filters = {}) => {
-  const { site_id, package_id, batch_id, status } = filters;
-  const { limit, offset } = parsePagination(filters);
-
-  let whereSql = "WHERE 1 = 1";
-  const params = [];
-  let paramIndex = 1;
-
-  if (site_id) {
-    whereSql += ` AND site_id = $${paramIndex}`;
-    params.push(site_id);
-    paramIndex++;
-  }
-
-  if (package_id) {
-    whereSql += ` AND package_id = $${paramIndex}`;
-    params.push(package_id);
-    paramIndex++;
-  }
-
-  if (batch_id) {
-    whereSql += ` AND batch_id = $${paramIndex}`;
-    params.push(batch_id);
-    paramIndex++;
-  }
-
-  if (status) {
-    whereSql += ` AND status = $${paramIndex}`;
-    params.push(status);
-    paramIndex++;
-  }
-
-  // Count total
-  const countSql = `SELECT COUNT(*)::int AS total FROM vouchers ${whereSql}`;
-  const countResult = await db.query(countSql, params);
-  const total = countResult.rows[0].total;
-
-  // Pata data
-  const sql = `
-    SELECT id, batch_id, package_id, site_id, code, status, mikrotik_sync, mikrotik_user,
-           price, duration_minutes, speed_limit_mbps, validity_days,
-           sold_at, activated_at, expires_at, used_at, created_at
-    FROM vouchers
-    ${whereSql}
-    ORDER BY created_at DESC
-    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-  `;
-  params.push(limit, offset);
-
-  const result = await db.query(sql, params);
-
-  return {
-    vouchers: result.rows,
-    pagination: buildPaginationMeta({
-      total,
-      limit,
-      offset,
-      count: result.rowCount,
-    }),
-  };
-};*
-
-const getAllVouchers = async (filters = {}) => {
-  const {
-    site_id,
-    package_id,
-    batch_id,
-    status,
-    limit = 100,
-    offset = 0,
-  } = filters;
-
-  let sql = `
-    SELECT 
-      v.id, v.batch_id, v.package_id, v.site_id, v.code, v.status, 
-      v.mikrotik_sync, v.mikrotik_user, v.price, v.duration_minutes, 
-      v.speed_limit_mbps, v.validity_days, v.sold_at, v.activated_at, 
-      v.expires_at, v.used_at, v.created_at,
-      p.name AS package_name
-    FROM vouchers v
-    JOIN packages p ON p.id = v.package_id
-    WHERE 1 = 1
-  `;
-  const params = [];
-  let paramIndex = 1;
-
-  if (site_id) {
-    sql += ` AND v.site_id = $${paramIndex}`;
-    params.push(site_id);
-    paramIndex++;
-  }
-
-  if (package_id) {
-    sql += ` AND v.package_id = $${paramIndex}`;
-    params.push(package_id);
-    paramIndex++;
-  }
-
-  if (batch_id) {
-    sql += ` AND v.batch_id = $${paramIndex}`;
-    params.push(batch_id);
-    paramIndex++;
-  }
-
-  if (status) {
-    sql += ` AND v.status = $${paramIndex}`;
-    params.push(status);
-    paramIndex++;
-  }
-
-  sql += ` ORDER BY v.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-  params.push(parseInt(limit, 10), parseInt(offset, 10));
-
-  const result = await db.query(sql, params);
-
-  return {
-    vouchers: result.rows,
-    count: result.rowCount,
-  };
-};*/
 
 const getAllVouchers = async (filters = {}) => {
   const {
