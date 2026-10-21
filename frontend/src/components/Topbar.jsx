@@ -14,7 +14,7 @@ const Topbar = ({ onToggleSidebar }) => {
           <Menu className="w-6 h-6" />
         </button>
         <h1 className="text-lg font-semibold text-gray-800">
-          BUILD Tz Campany LMT Wifi Voucher System
+          BUILD Tz Wifi Voucher System
         </h1>
       </div>
 

@@ -166,16 +166,7 @@ const Vouchers = () => {
         </div>
 
         <div className="flex gap-2">
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-
-          <div className="flex gap-2">
+          
             <button
               onClick={fetchData}
               disabled={loading}
@@ -186,26 +177,29 @@ const Vouchers = () => {
               />
               Refresh
             </button>
-
-            {/* ONGEZA HII */}
-            <button
-              onClick={() => navigate("/vouchers/print?status=AVAILABLE")}
-              className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition"
-              title="Chapisha vocha zilizopo"
-            >
-              <Printer className="w-4 h-4" />
-              Chapisha
-            </button>
           </div>
-          {canGenerate && (
-            <button
-              onClick={() => setShowGenerateModal(true)}
-              className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition"
-            >
-              <Plus className="w-4 h-4" />
-              Zalisha Vocha
-            </button>
-          )}
+
+          {/* ONGEZA HII */}
+          <div> {/* Nyongeza*/}
+          <button
+            onClick={() => navigate("/vouchers/print?status=AVAILABLE")}
+            className="inline-flex items-center gap-2 bg-orange-100 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition"
+            title="Chapisha vocha zilizopo"
+          >
+            <Printer className="w-4 h-4" />
+            Chapisha
+          </button>
+        </div>
+         <div>
+        {canGenerate && (
+          <button
+            onClick={() => setShowGenerateModal(true)}
+            className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition"
+          >
+            <Plus className="w-4 h-4" />
+            Zalisha Vocha
+          </button>
+        )}
         </div>
       </div>
 
