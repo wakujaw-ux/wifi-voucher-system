@@ -22,6 +22,7 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.12.1",
     "node-cron": "^4.6.0",
+    "node-routeros": "^1.6.8",
     "pg": "^8.23.0"
   },
   "devDependencies": {
