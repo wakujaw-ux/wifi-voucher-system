@@ -24,12 +24,26 @@ const syncVoucherToHotspot = async (voucher) => {
 // ================================================================
 // REMOVE VOUCHER FROM HOTSPOT
 // ================================================================
+
 const removeVoucherFromHotspot = async (code) => {
   try {
+    // 1. Mtoe kwenye Active Sessions kwanza (kama alikuwa ameingia)
+    const activeSessions = await client.getActiveHotspotSessions();
+    // Tafuta session inayomilikiwa na huyu user (code)
+    const session = activeSessions.find((s) => s.user === code);
+    if (session) {
+      await client.disconnectHotspotSession(session[".id"]);
+    }
+
+    // 2. Futa user kwenye Hotspot Users
     await client.removeHotspotUser(code);
     return { success: true };
   } catch (err) {
-    return { success: false, error: err.message, code: err.code };
+    // Kama user hakuwepo kwenye Hotspot Users (labda alikuwa active tu), tunaona kama ni mafanikio
+    if (err.message.includes("not found") || err.code === "USER_NOT_FOUND") {
+      return { success: true };
+    }
+    return { success: false, error: err.message };
   }
 };
 

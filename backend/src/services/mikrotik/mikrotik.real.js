@@ -37,8 +37,11 @@ class MikroTikReal {
       return true;
     } catch (err) {
       this.connected = false;
-      console.error("🔌 [MikroTik Real] Connection failed:", err.message);
-      throw err;
+      // Badilisha hapa ili tuone kosa kamili:
+      console.error("🔌 [MikroTik Real] Connection failed:", err);
+      throw new Error(
+        "Imeshindwa kuunganisha na MikroTik. Kagua kama VM inawaka.",
+      );
     }
   }
 

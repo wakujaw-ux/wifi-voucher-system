@@ -287,13 +287,14 @@ const getVoucherStats = async (filters = {}) => {
 // ============================================================
 // REVOKE VOUCHER
 // ============================================================
+
 const revokeVoucher = async (id, userId, reason) => {
   const voucher = await getVoucherById(id);
 
-  // Hakuna haja ya ku-revoke voucher ambayo tayari ime-revoked au ime-used au ime-expired
+  // Hauruhusiwi kurevoke voucher iliyotumika au iliyoisha
   if (voucher.status === "USED" || voucher.status === "EXPIRED") {
     const err = new Error(
-      `Voucher haiwezi kurevoke. status: ${voucher.status}`,
+      `Voucher haiwezi kurevoke. Status: ${voucher.status}`,
     );
     err.code = "VOUCHER_NOT_REVOKABLE";
     err.status = 400;
@@ -301,16 +302,42 @@ const revokeVoucher = async (id, userId, reason) => {
   }
 
   if (voucher.status === "REVOKED") {
-    const err = new Error("Voucher tayari ime-revoked");
+    const err = new Error("Voucher imesharovekwa");
     err.code = "VOUCHER_ALREADY_REVOKED";
     err.status = 400;
     throw err;
   }
 
-  const sql = `UPDATE vouchers SET status = 'REVOKED', revoked_at = NOW(), revoked_by = $1, updated_at = NOW() WHERE id = $2 RETURNING id, code, status, revoked_at, revoked_by`;
+  // ============================================================
+  // Futa vocha kwenye MikroTik
+  // ============================================================
+  try {
+    const hotspotService = require("./mikrotik/hotspot.service");
+    const result = await hotspotService.removeVoucherFromHotspot(voucher.code);
 
+    if (result && result.success) {
+      console.log(
+        `✅ [MikroTik] Voucher ${voucher.code} imefutwa kwenye MikroTik.`,
+      );
+    } else {
+      // Hapa tunakamata kosa kwa usahihi
+      console.error(
+        `⚠️ [MikroTik] Imeshindwa kufuta vocha kwenye MikroTik: ${result?.error || "Unknown error"}`,
+      );
+    }
+  } catch (mtErr) {
+    console.error(
+      `⚠️ [MikroTik] Imeshindwa kufuta vocha kwenye MikroTik: ${mtErr.message}`,
+    );
+  }
+
+  const sql = `
+    UPDATE vouchers
+    SET status = 'REVOKED', revoked_at = NOW(), revoked_by = $1, updated_at = NOW()
+    WHERE id = $2
+    RETURNING id, code, status, revoked_at, revoked_by
+  `;
   const result = await db.query(sql, [userId, id]);
-
   return result.rows[0];
 };
 
