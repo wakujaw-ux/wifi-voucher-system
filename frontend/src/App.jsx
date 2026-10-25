@@ -14,6 +14,7 @@ import Reports from "./pages/Reports";
 import Expenses from "./pages/Expenses";
 import Settings from "./pages/Settings";
 import PrintVouchers from "./pages/PrintVouchers";
+import PublicPortal from './pages/PublicPortal';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
       <AuthProvider>
         <Toaster position="top-right" />
         <Routes>
+          <Route path="/portal" element={<PublicPortal />} /> // page ya mteja
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Login />} />
 
