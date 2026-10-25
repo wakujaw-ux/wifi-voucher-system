@@ -21,6 +21,7 @@ const voucherRoutes = require("./routes/voucher.routes");
 const saleRoutes = require("./routes/sale.routes");
 const reportRoutes = require("./routes/report.routes");
 const settingsRoutes = require('./routes/settings.routes');
+const paymentRoutes = require('./routes/payment.routes');
 
 const app = express();
 
@@ -93,7 +94,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// 404
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -101,6 +102,9 @@ app.use((req, res) => {
     code: "ROUTE_NOT_FOUND",
   });
 });
+
+// payment handler
+app.use('/api/payments', paymentRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
