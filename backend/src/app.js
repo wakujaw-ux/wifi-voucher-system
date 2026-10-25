@@ -8,7 +8,7 @@ const requestId = require("./middleware/requestId.middleware");
 const logger = require("./middleware/logger.middleware");
 const { globalLimiter } = require("./middleware/rateLimit.middleware");
 const { AppError } = require("./utils/AppError");
-const { startAllJobs } = require('./jobs');
+const { startAllJobs } = require("./jobs");
 
 const expenseRoutes = require("./routes/expense.routes");
 const userRoutes = require("./routes/user.routes");
@@ -20,8 +20,8 @@ const packageRoutes = require("./routes/package.routes");
 const voucherRoutes = require("./routes/voucher.routes");
 const saleRoutes = require("./routes/sale.routes");
 const reportRoutes = require("./routes/report.routes");
-const settingsRoutes = require('./routes/settings.routes');
-const paymentRoutes = require('./routes/payment.routes');
+const settingsRoutes = require("./routes/settings.routes");
+const paymentRoutes = require("./routes/payment.routes");
 
 const app = express();
 
@@ -83,7 +83,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/reports", reportRoutes);
-app.use('/api/settings', settingsRoutes);
+app.use("/api/settings", settingsRoutes);
 
 // Root
 app.get("/", (req, res) => {
@@ -94,6 +94,9 @@ app.get("/", (req, res) => {
   });
 });
 
+// payment handler
+app.use("/api/payments", paymentRoutes);
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
@@ -102,9 +105,6 @@ app.use((req, res) => {
     code: "ROUTE_NOT_FOUND",
   });
 });
-
-// payment handler
-app.use('/api/payments', paymentRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -166,7 +166,6 @@ const server = app.listen(PORT, () => {
 
 // Anzisha background jobs
 startAllJobs();
-
 
 server.on("error", (err) => {
   console.error("SERVER ERROR:", err);
