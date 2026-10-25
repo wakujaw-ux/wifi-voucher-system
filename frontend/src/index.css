@@ -72,3 +72,18 @@ body {
     margin: 10mm;
   }
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .voucher-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: 1px dashed #000 !important;
+  }
+  @page {
+    size: a4;
+    margin: 1omm;
+  }
+}

@@ -5,7 +5,7 @@ import {
   DollarSign,
   Ticket,
   RefreshCw,
-  Wallet,
+  // Wallet,
   ShoppingCart,
   ArrowUpRight,
   ArrowDownRight,
@@ -26,6 +26,9 @@ import {
 import toast from "react-hot-toast";
 import { reportApi } from "../api/report.api";
 import DateRangeFilter from "../components/DateRangeFilter";
+import { Download } from "lucide-react";
+import { exportToCSV } from "../utils/exportCsv";
+import { useSearchParams } from "react-router-dom";
 
 const TABS = [
   { id: "sales", label: "Mauzo", icon: ShoppingCart },
@@ -44,7 +47,10 @@ const CHART_COLORS = [
 ];
 
 const Reports = () => {
-  const [activeTab, setActiveTab] = useState("sales");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("tab") || "sales",
+  );
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
 
@@ -109,7 +115,7 @@ const Reports = () => {
       maximumFractionDigits: 0,
     })}`;
   };
-  
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("sw-TZ", {
@@ -130,6 +136,43 @@ const Reports = () => {
           </p>
         </div>
 
+        {/* KITUFE CHA EXPORT CSV KINAANZIA HAPA */}
+        <button
+          onClick={() => {
+            if (activeTab === "sales" && data?.by_package) {
+              // Tunabadilisha jina la column na kuweka tarehe
+              const formatted = data.by_package.map((item) => ({
+                Tarehe: item.sale_date ? item.sale_date.split("T")[0] : "-",
+                "Jina la Kifurushi": item.package_name,
+                "Idadi ya Mauzo": item.sales_count,
+                "Mapato (TZS)": item.revenue,
+              }));
+              exportToCSV(formatted, "Ripoti_Mauzo");
+            } else if (activeTab === "vouchers" && data?.by_status) {
+              const formatted = data.by_status.map((item) => ({
+                Hali: item.status,
+                Idadi: item.count,
+                Thamani: item.value,
+              }));
+              exportToCSV(formatted, "Ripoti_Voucha");
+            } else if (activeTab === "revenue" && data?.by_method) {
+              const formatted = data.by_method.map((item) => ({
+                Njia: item.method,
+                Miamala: item.transaction_count,
+                Mapato: item.revenue,
+              }));
+              exportToCSV(formatted, "Ripoti_Mapato");
+            } else {
+              alert("Hakuna data kwenye tab hii");
+            }
+          }}
+          className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition"
+        >
+          <Download className="w-4 h-4" />
+          Export CSV
+        </button>
+        {/* KITUFE CHA EXPORT CSV KINAISHIA HAPA */}
+
         <button
           onClick={fetchReport}
           disabled={loading}
@@ -139,7 +182,6 @@ const Reports = () => {
           Refresh
         </button>
       </div>
-
       {/* Tabs */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm mb-4">
         <div className="flex overflow-x-auto border-b border-gray-100">

@@ -6,7 +6,7 @@ const { success, error } = require("../utils/response");
 const getActive = async (req, res) => {
   try {
     // Ongeza mstari huu:
-    await sessionService.syncActiveSessionsFromMikroTik();
+    //await sessionService.syncActiveSessionsFromMikroTik();
 
     const filters = {};
     if (req.query.site_id) filters.site_id = req.query.site_id;

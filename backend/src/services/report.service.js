@@ -1,12 +1,12 @@
-const db = require('../config/database');
+const db = require("../config/database");
 
 // ============================================================
 // SALES REPORT
 // ============================================================
 const getSalesReport = async (filters = {}) => {
-  const { site_id, from_date, to_date, group_by = 'day' } = filters;
+  const { site_id, from_date, to_date, group_by = "day" } = filters;
 
-  let whereSql = 'WHERE 1 = 1';
+  let whereSql = "WHERE 1 = 1";
   const params = [];
   let paramIndex = 1;
 
@@ -41,8 +41,8 @@ const getSalesReport = async (filters = {}) => {
 
   // By day/month
   let groupExpr = "DATE(s.created_at)";
-  if (group_by === 'month') groupExpr = "DATE_TRUNC('month', s.created_at)";
-  if (group_by === 'week') groupExpr = "DATE_TRUNC('week', s.created_at)";
+  if (group_by === "month") groupExpr = "DATE_TRUNC('month', s.created_at)";
+  if (group_by === "week") groupExpr = "DATE_TRUNC('week', s.created_at)";
 
   const byPeriodSql = `
     SELECT
@@ -56,18 +56,19 @@ const getSalesReport = async (filters = {}) => {
   `;
   const byPeriod = (await db.query(byPeriodSql, params)).rows;
 
-  // By package
+  // By package (Sasa inatofautisha kwa Tarehe)
   const byPackageSql = `
     SELECT
       p.id AS package_id,
       p.name AS package_name,
+      DATE(s.created_at) AS sale_date,
       COUNT(s.id)::int AS sales_count,
       COALESCE(SUM(s.amount), 0)::numeric AS revenue
     FROM sales s
     JOIN packages p ON p.id = s.package_id
     ${whereSql}
-    GROUP BY p.id, p.name
-    ORDER BY revenue DESC
+    GROUP BY p.id, p.name, DATE(s.created_at)
+    ORDER BY sale_date DESC, revenue DESC
   `;
   const byPackage = (await db.query(byPackageSql, params)).rows;
 
@@ -101,7 +102,7 @@ const getSalesReport = async (filters = {}) => {
 const getVoucherReport = async (filters = {}) => {
   const { site_id, from_date, to_date } = filters;
 
-  let whereSql = 'WHERE 1 = 1';
+  let whereSql = "WHERE 1 = 1";
   const params = [];
   let paramIndex = 1;
 
@@ -143,7 +144,7 @@ const getVoucherReport = async (filters = {}) => {
       COUNT(v.id) FILTER (WHERE v.status IN ('CREATED', 'AVAILABLE'))::int AS available
     FROM vouchers v
     JOIN packages p ON p.id = v.package_id
-    ${whereSql.replace(/site_id/g, 'v.site_id').replace(/created_at/g, 'v.created_at')}
+    ${whereSql.replace(/site_id/g, "v.site_id").replace(/created_at/g, "v.created_at")}
     GROUP BY p.name
     ORDER BY total DESC
   `;
@@ -161,7 +162,7 @@ const getVoucherReport = async (filters = {}) => {
 const getRevenueReport = async (filters = {}) => {
   const { site_id, from_date, to_date } = filters;
 
-  let whereSql = 'WHERE 1 = 1';
+  let whereSql = "WHERE 1 = 1";
   const params = [];
   let paramIndex = 1;
 
@@ -215,7 +216,7 @@ const getRevenueReport = async (filters = {}) => {
 const getSessionReport = async (filters = {}) => {
   const { site_id, from_date, to_date } = filters;
 
-  let whereSql = 'WHERE 1 = 1';
+  let whereSql = "WHERE 1 = 1";
   const params = [];
   let paramIndex = 1;
 
@@ -271,7 +272,7 @@ const getSessionReport = async (filters = {}) => {
 const getExpensesReport = async (filters = {}) => {
   const { site_id, from_date, to_date } = filters;
 
-  let whereSql = 'WHERE 1 = 1';
+  let whereSql = "WHERE 1 = 1";
   const params = [];
   let paramIndex = 1;
 
@@ -324,7 +325,7 @@ const getProfitLossReport = async (filters = {}) => {
   const { site_id, from_date, to_date } = filters;
 
   // Revenue
-  let revSql = 'WHERE 1 = 1';
+  let revSql = "WHERE 1 = 1";
   const revParams = [];
   let idx = 1;
 
@@ -348,7 +349,7 @@ const getProfitLossReport = async (filters = {}) => {
   const revenue = (await db.query(revenueSql, revParams)).rows[0];
 
   // Expenses
-  let expSql = 'WHERE 1 = 1';
+  let expSql = "WHERE 1 = 1";
   const expParams = [];
   idx = 1;
 
@@ -374,15 +375,16 @@ const getProfitLossReport = async (filters = {}) => {
   const totalRevenue = parseFloat(revenue.total) || 0;
   const totalExpenses = parseFloat(expenses.total) || 0;
   const profit = totalRevenue - totalExpenses;
-  const margin = totalRevenue > 0 ? ((profit / totalRevenue) * 100).toFixed(2) : '0.00';
+  const margin =
+    totalRevenue > 0 ? ((profit / totalRevenue) * 100).toFixed(2) : "0.00";
 
   return {
-    period: { from_date: from_date || 'beginning', to_date: to_date || 'now' },
+    period: { from_date: from_date || "beginning", to_date: to_date || "now" },
     revenue: totalRevenue.toFixed(2),
     expenses: totalExpenses.toFixed(2),
     profit: profit.toFixed(2),
     margin_percent: margin,
-    status: profit > 0 ? 'PROFIT' : profit < 0 ? 'LOSS' : 'BREAK_EVEN',
+    status: profit > 0 ? "PROFIT" : profit < 0 ? "LOSS" : "BREAK_EVEN",
   };
 };
 

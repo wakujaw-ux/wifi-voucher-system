@@ -65,5 +65,25 @@ const VoucherPrintCard = ({ voucher, businessName, supportPhone }) => {
     </div>
   );
 };
+/*
+// ==============================================================
+const VoucherPrintCard = ({ voucher, businessName, supportPhone }) => (
+  <div className="voucher-card bg-white border-2 border-dashed border-gray-400 rounded-lg p-3 text-center">
+    <div className="text-xs font-bold text-primary-600 uppercase">{businessName || 'WIFI'}</div>
+    <div className="text-xl font-bold font-mono text-gray-900 my-2">{voucher.code}</div>
+    <div className="grid grid-cols-2 gap-1 text-[10px] border-t border-gray-300 pt-2">
+      <div className="text-left">
+        <p className="text-gray-500">Muda</p>
+        <p className="font-semibold">{voucher.duration_minutes} min</p>
+      </div>
+      <div className="text-right">
+        <p className="text-gray-500">Bei</p>
+        <p className="font-semibold">TZS {parseFloat(voucher.price).toLocaleString()}</p>
+      </div>
+    </div>
+    <div className="text-[9px] text-gray-500 mt-2">{supportPhone || 'Msaada'}</div>
+  </div>
+);
+*/
 
 export default VoucherPrintCard;

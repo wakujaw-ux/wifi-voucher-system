@@ -7,11 +7,12 @@ import {
   DollarSign,
   Calendar,
   Eye,
-  X,
+  FileText,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { saleApi } from "../api/sale.api";
 import Modal from "../components/Modal";
+import { useNavigate } from "react-router-dom";
 
 const PAYMENT_LABELS = {
   CASH: "Cash",
@@ -35,6 +36,7 @@ const PAYMENT_COLORS = {
 const today = new Date().toISOString().split("T")[0];
 
 const Sales = () => {
+  const navigate = useNavigate();
   const [sales, setSales] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -143,6 +145,16 @@ const Sales = () => {
           <h1 className="text-2xl font-bold text-gray-800">Mauzo (Sales)</h1>
           <p className="text-gray-500 mt-1">Rekodi za mauzo ya vocha</p>
         </div>
+
+        {/* KITUFE CHA RIPOTI KINAANZIA HAPA */}
+        <button
+          onClick={() => navigate("/reports?tab=sales")}
+          className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition"
+        >
+          <FileText className="w-4 h-4" />
+          Angalia Ripoti
+        </button>
+        {/* KITUFE CHA RIPOTI KINAISHIA HAPA */}
 
         <button
           onClick={fetchData}
