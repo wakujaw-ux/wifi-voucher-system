@@ -54,6 +54,9 @@ const PublicPortal = () => {
 
   // Kama amefanikiwa kulipa, onyesha vocha yake
   if (voucherResult) {
+    const MIKROTIK_IP = "192.168.56.10";
+    const autoLoginUrl = `http://${MIKROTIK_IP}/login?username=${voucherResult.voucher_code}&password=${voucherResult.voucher_code}`;
+
     return (
       <div className="min-h-screen bg-primary-600 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
@@ -77,8 +80,17 @@ const PublicPortal = () => {
             </p>
           </div>
 
-          <div className="bg-blue-50 text-blue-800 p-4 rounded-lg text-sm">
-            Nenda kwenye ukurasa wa kuingiza Wi-Fi (Login) na uweke code hii.
+          {/* HAPA NDO TUNAHITAJI KUTUMIA ILE VARIABLE */}
+          <a
+            href={autoLoginUrl}
+            className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition mb-4 text-lg shadow-lg"
+          >
+            <Wifi className="w-6 h-6" />
+            Unganisha Sasa (Connect)
+          </a>
+
+          <div className="text-xs text-gray-400">
+            Bonyeza kitufe hapo juu ili kuanza kutumia intaneti mara moja.
           </div>
         </div>
       </div>

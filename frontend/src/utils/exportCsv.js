@@ -4,13 +4,13 @@ export const exportToCSV = (data, filename) => {
   const headers = Object.keys(data[0]);
   const csvRows = [];
 
-  // 1. Hii ni amri maalum inayolazimisha Excel kutumia comma (,) kutenganisha
+  // 1. Amri maalum kwa ajili ya Excel kutambua comma
   csvRows.push("sep=,");
 
-  // 2. Weka vichwa vya habari
+  // 2. Vichwa vya habari
   csvRows.push(headers.join(","));
 
-  // 3. Weka data
+  // 3. Data
   for (const row of data) {
     const values = headers.map((header) => {
       const val = row[header] ?? "";
@@ -36,5 +36,3 @@ export const exportToCSV = (data, filename) => {
   link.click();
   document.body.removeChild(link);
 };
-
-export default exportToCSV;

@@ -39,4 +39,4 @@ INSERT INTO settings (key, value, description) VALUES
 ('currency',             'TZS',                     'Sarafu inayotumika'),
 ('voucher_prefix',       'WIFI',                    'Prefix ya voucher codes'),
 ('voucher_code_length',  '6',                       'Urefu wa voucher code'),
-('session_check_interval','60',                     'Sekunde kati ya kila sync na MikroTik');
+('session_check_interval','60',                     'Sekunde kati ya kila sync na MikroTik'); 

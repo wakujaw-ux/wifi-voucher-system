@@ -27,8 +27,8 @@ import toast from "react-hot-toast";
 import { reportApi } from "../api/report.api";
 import DateRangeFilter from "../components/DateRangeFilter";
 import { Download } from "lucide-react";
-import { exportToCSV } from "../utils/exportCsv";
 import { useSearchParams } from "react-router-dom";
+import client from "../api/client";
 
 const TABS = [
   { id: "sales", label: "Mauzo", icon: ShoppingCart },
@@ -138,40 +138,44 @@ const Reports = () => {
 
         {/* KITUFE CHA EXPORT CSV KINAANZIA HAPA */}
         <button
-          onClick={() => {
-            if (activeTab === "sales" && data?.by_package) {
-              // Tunabadilisha jina la column na kuweka tarehe
-              const formatted = data.by_package.map((item) => ({
-                Tarehe: item.sale_date ? item.sale_date.split("T")[0] : "-",
-                "Jina la Kifurushi": item.package_name,
-                "Idadi ya Mauzo": item.sales_count,
-                "Mapato (TZS)": item.revenue,
-              }));
-              exportToCSV(formatted, "Ripoti_Mauzo");
-            } else if (activeTab === "vouchers" && data?.by_status) {
-              const formatted = data.by_status.map((item) => ({
-                Hali: item.status,
-                Idadi: item.count,
-                Thamani: item.value,
-              }));
-              exportToCSV(formatted, "Ripoti_Voucha");
-            } else if (activeTab === "revenue" && data?.by_method) {
-              const formatted = data.by_method.map((item) => ({
-                Njia: item.method,
-                Miamala: item.transaction_count,
-                Mapato: item.revenue,
-              }));
-              exportToCSV(formatted, "Ripoti_Mapato");
-            } else {
-              alert("Hakuna data kwenye tab hii");
+          onClick={async () => {
+            try {
+              // Chukua vichujio (filters) vya sasa
+              const queryString = new URLSearchParams(
+                appliedFilters,
+              ).toString();
+
+              // Tuma ombi kwa backend ikitaka faili la blob (binary)
+              const response = await client.get(
+                `/reports/sales/export?${queryString}`,
+                {
+                  responseType: "blob",
+                },
+              );
+
+              // Tengeneza link ya kupakua faili
+              const url = window.URL.createObjectURL(new Blob([response.data]));
+              const link = document.createElement("a");
+              link.href = url;
+              link.setAttribute(
+                "download",
+                `Ripoti_Mauzo_${new Date().toISOString().split("T")[0]}.xlsx`,
+              );
+              document.body.appendChild(link);
+              link.click();
+
+              // Safisha
+              link.remove();
+              window.URL.revokeObjectURL(url);
+            } catch (err) {
+              alert("Imeshindwa kupakua ripoti. Jaribu tena.");
             }
           }}
           className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition"
         >
           <Download className="w-4 h-4" />
-          Export CSV
+          Download Excel (.xlsx)
         </button>
-        {/* KITUFE CHA EXPORT CSV KINAISHIA HAPA */}
 
         <button
           onClick={fetchReport}

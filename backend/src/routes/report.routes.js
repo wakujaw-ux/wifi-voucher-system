@@ -12,5 +12,6 @@ router.get('/revenue', reportController.getRevenue);
 router.get('/sessions', reportController.getSessions);
 router.get('/expenses', reportController.getExpenses);
 router.get('/profit-loss', reportController.getProfitLoss);
+router.get('/sales/export', reportController.exportSalesXlsx);
 
 module.exports = router;

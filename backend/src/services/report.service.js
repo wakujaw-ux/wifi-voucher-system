@@ -61,14 +61,14 @@ const getSalesReport = async (filters = {}) => {
     SELECT
       p.id AS package_id,
       p.name AS package_name,
-      DATE(s.created_at) AS sale_date,
+      TO_CHAR(DATE(s.created_at), 'YYYY-MM-DD') AS sale_date,
       COUNT(s.id)::int AS sales_count,
       COALESCE(SUM(s.amount), 0)::numeric AS revenue
     FROM sales s
     JOIN packages p ON p.id = s.package_id
     ${whereSql}
     GROUP BY p.id, p.name, DATE(s.created_at)
-    ORDER BY sale_date DESC, revenue DESC
+    ORDER BY DATE(s.created_at) DESC, revenue DESC
   `;
   const byPackage = (await db.query(byPackageSql, params)).rows;
 
