@@ -25,18 +25,24 @@ const processMockPayment = async (
     console.log(
       `✅ [Mock ${method}] Malipo yamekamilika kutoka ${phoneNumber}!`,
     );
-
-    // 3. Tengeneza Vocha
+    // 3. Tengeneza Vocha (Hata kama MikroTik iko offline, vocha itaundwa kwenye Database)
     const generateData = {
       site_id: siteId,
       package_id: packageId,
       quantity: 1,
-      prefix: method.substring(0, 3).toUpperCase(), // Mfano: MPE, TIG, AIR
+      prefix: method.substring(0, 3).toUpperCase(),
       notes: `Malipo ya ${method} kutoka ${phoneNumber}`,
     };
 
-    const result = await voucherService.generateVouchers(generateData, null);
-    const voucher = result.vouchers[0];
+    let voucher;
+    try {
+      const result = await voucherService.generateVouchers(generateData, null);
+      voucher = result.vouchers[0];
+    } catch (voucherErr) {
+      // Kama vocha ilishindwa kutengenezwa kabisa kwenye Database, ndio tunarudisha kosa
+      throw new Error("Imeshindwa kutengeneza vocha kwenye mfumo.");
+    }
+    //const voucher = result.vouchers[0];
 
     // 4. Rekodi Sale na Payment
     const saleRes = await db.query(
