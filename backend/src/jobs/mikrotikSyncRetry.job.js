@@ -34,6 +34,8 @@ const retryFailedSyncs = async () => {
     let failed = 0;
 
     for (const voucher of result.rows) {
+      // ONGEZA HII: Subiri nusu sekunde kabla ya kutuma vocha inayofuata
+      await new Promise((resolve) => setTimeout(resolve, 500));
       const syncResult = await hotspotService.syncVoucherToHotspot(voucher);
 
       if (syncResult.success) {
