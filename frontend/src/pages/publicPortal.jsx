@@ -23,7 +23,7 @@ const PublicPortal = () => {
           setSelectedPkg(res.data.data.packages[0]);
         }
       } catch (err) {
-        toast.error("Imeshindwa kupata packages");
+        toast.error(err.message || "Imeshindwa kupata packages");
       }
     };
     fetchPackages();
@@ -31,14 +31,20 @@ const PublicPortal = () => {
 
   const handlePayment = async (e) => {
     e.preventDefault();
-    if (!selectedPkg) return toast.error("Chagua kifurushi kwanza");
-    if (!phone || phone.length < 10)
-      return toast.error("Weka namba sahihi ya simu");
+
+    // 1. Kagua kama kifurushi kimechaguliwa
+    if (!selectedPkg) return toast.error("Tafadhali chagua kifurushi kwanza");
+
+    // 2. Kagua namba ya simu (Tanzania: Lazima iwe namba 10, ianze na 0, na iwe namba tu)
+    const phoneRegex = /^0[0-9]{9}$/;
+    if (!phoneRegex.test(phone.trim())) {
+      return toast.error("Namba ya simu si sahihi. Tumia mfano: 0755123456");
+    }
 
     setLoading(true);
     try {
       const res = await client.post("/payments/mock-pay", {
-        phone,
+        phone: phone.trim(),
         package_id: selectedPkg.id,
         site_id: SITE_ID,
         method,

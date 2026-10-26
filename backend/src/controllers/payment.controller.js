@@ -14,7 +14,17 @@ const mockPay = async (req, res) => {
     );
   }
 
-  // Chagua method, kama haipo tumia MPESA kama default
+  // Kagua muundo wa namba ya simu
+  const phoneRegex = /^0[0-9]{9}$/;
+  if (!phoneRegex.test(phone)) {
+    return error(
+      res,
+      "Muundo wa namba ya simu si sahihi",
+      "INVALID_PHONE",
+      400,
+    );
+  }
+
   const paymentMethod = method || "MPESA";
   const allowedMethods = [
     "CASH",
@@ -38,6 +48,10 @@ const mockPay = async (req, res) => {
     );
     return success(res, result, "Malipo yamekamilika kwa mafanikio");
   } catch (err) {
+    // Kama kifurushi hakipo (imekamatwa kwenye payment.service.js)
+    if (err.message === "Kifurushi hakipo") {
+      return error(res, err.message, "PACKAGE_NOT_FOUND", 404);
+    }
     return error(res, err.message, "PAYMENT_FAILED", 500);
   }
 };
