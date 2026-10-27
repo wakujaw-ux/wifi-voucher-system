@@ -2,7 +2,7 @@ const db = require("../config/database");
 const mikrotikClient = require("./mikrotik/mikrotik.client");
 
 // ============================================================
-// GET ACTIVE SESSIONS
+// GET ACTIVE SESSIONS (Kwa ajili ya Frontend)
 // ============================================================
 const getActiveSessions = async (filters = {}) => {
   const { site_id, limit = 100, offset = 0 } = filters;
@@ -50,14 +50,11 @@ const getActiveSessions = async (filters = {}) => {
     };
   });
 
-  // Chuja sessions zilizopitwa na wakati (Hii inaficha Zombie kwenye UI papo hapo)
-  const activeValidSessions = sessions.filter((s) => s.remaining_seconds > 0);
-
-  return { sessions: activeValidSessions, count: activeValidSessions.length };
+  return { sessions, count: sessions.length };
 };
 
 // ============================================================
-// GET ALL SESSIONS (history)
+// GET ALL SESSIONS (History)
 // ============================================================
 const getAllSessions = async (filters = {}) => {
   const {
@@ -91,25 +88,21 @@ const getAllSessions = async (filters = {}) => {
     params.push(site_id);
     paramIndex++;
   }
-
   if (voucher_id) {
     sql += ` AND s.voucher_id = $${paramIndex}`;
     params.push(voucher_id);
     paramIndex++;
   }
-
   if (status) {
     sql += ` AND s.status = $${paramIndex}`;
     params.push(status);
     paramIndex++;
   }
-
   if (from_date) {
     sql += ` AND s.login_at >= $${paramIndex}`;
     params.push(from_date);
     paramIndex++;
   }
-
   if (to_date) {
     sql += ` AND s.login_at <= $${paramIndex}`;
     params.push(to_date);
@@ -155,18 +148,15 @@ const getSessionById = async (id) => {
 // ============================================================
 // DISCONNECT SESSION
 // ============================================================
-
 const disconnectSession = async (id, userId, reason) => {
   const client = await db.getClient();
 
   try {
     await client.query("BEGIN");
 
-    // Pata session pamoja na code ya voucher
     const sessionResult = await client.query(
       `SELECT s.id, s.voucher_id, s.mikrotik_session_id, s.status, s.login_at, v.code AS voucher_code 
-       FROM sessions s 
-       JOIN vouchers v ON v.id = s.voucher_id 
+       FROM sessions s JOIN vouchers v ON v.id = s.voucher_id 
        WHERE s.id = $1 FOR UPDATE`,
       [id],
     );
@@ -189,52 +179,31 @@ const disconnectSession = async (id, userId, reason) => {
       throw err;
     }
 
-    // ============================================================
-    // Tuma amri kwenye MikroTik kumtoa mteja na kuzima user wake
-    // ============================================================
     if (session.mikrotik_session_id) {
       try {
-        // 1. Mtoe kwenye Active
         await mikrotikClient.disconnectHotspotSession(
           session.mikrotik_session_id,
         );
-
-        // 2. Zima user ili asirudi kwa cookie
         await mikrotikClient.disableHotspotUser(session.voucher_code);
-
-        console.log(
-          `✅ [MikroTik] Session ${session.mikrotik_session_id} imefutwa na user amezimwa.`,
-        );
+        console.log(`✅ [MikroTik] Session imefutwa na user amezimwa.`);
       } catch (mtErr) {
         console.error(
           `❌ [MikroTik] Imeshindwa kumtoa mteja: ${mtErr.message}`,
         );
       }
-    } else {
-      console.warn(
-        `⚠️ [MikroTik] Session haina mikrotik_session_id, haiwezi kumtoa.`,
-      );
     }
 
-    // Hesabu muda
     const loginAt = new Date(session.login_at).getTime();
     const now = Date.now();
     const durationSeconds = Math.floor((now - loginAt) / 1000);
 
-    // Update session
     const updateResult = await client.query(
-      `UPDATE sessions
-       SET status = 'DISCONNECTED', logout_at = NOW(), duration_seconds = $1, updated_at = NOW()
-       WHERE id = $2
-       RETURNING id, voucher_id, status, login_at, logout_at, duration_seconds`,
+      `UPDATE sessions SET status = 'DISCONNECTED', logout_at = NOW(), duration_seconds = $1, updated_at = NOW() WHERE id = $2 RETURNING id, voucher_id, status, login_at, logout_at, duration_seconds`,
       [durationSeconds, id],
     );
 
-    // Update voucher status → USED
     await client.query(
-      `UPDATE vouchers
-       SET status = 'USED', used_at = NOW(), updated_at = NOW()
-       WHERE id = $1 AND status = 'ACTIVE'`,
+      `UPDATE vouchers SET status = 'USED', used_at = NOW(), updated_at = NOW() WHERE id = $1 AND status = 'ACTIVE'`,
       [session.voucher_id],
     );
 
@@ -258,7 +227,6 @@ const disconnectSession = async (id, userId, reason) => {
 // ============================================================
 const getSessionStats = async (filters = {}) => {
   const { site_id, from_date, to_date } = filters;
-
   let whereSql = "WHERE 1 = 1";
   const params = [];
   let paramIndex = 1;
@@ -268,13 +236,11 @@ const getSessionStats = async (filters = {}) => {
     params.push(site_id);
     paramIndex++;
   }
-
   if (from_date) {
     whereSql += ` AND login_at >= $${paramIndex}`;
     params.push(from_date);
     paramIndex++;
   }
-
   if (to_date) {
     whereSql += ` AND login_at <= $${paramIndex}`;
     params.push(to_date);
@@ -289,19 +255,16 @@ const getSessionStats = async (filters = {}) => {
       COUNT(*) FILTER (WHERE status = 'DISCONNECTED')::int AS disconnected_sessions,
       COALESCE(SUM(data_used_mb), 0)::numeric AS total_data_mb,
       COALESCE(AVG(duration_seconds), 0)::int AS avg_duration_seconds
-    FROM sessions
-    ${whereSql}
+    FROM sessions ${whereSql}
   `;
-
   const result = await db.query(sql, params);
   return result.rows[0];
 };
 
 // ============================================================
-// FORCE EXPIRE (inatumika baadaye na background job)
+// FORCE EXPIRE (Inatumika na Background Job)
 // ============================================================
 const expireStaleSessions = async () => {
-  // Pata sessions zote ACTIVE ambazo muda umekwisha
   const sql = `
     UPDATE sessions
     SET status = 'EXPIRED', logout_at = NOW(), updated_at = NOW()
@@ -314,17 +277,13 @@ const expireStaleSessions = async () => {
   `;
   const result = await db.query(sql);
 
-  // Update vouchers zao
   if (result.rowCount > 0) {
     const voucherIds = result.rows.map((r) => r.voucher_id);
     await db.query(
-      `UPDATE vouchers
-       SET status = 'USED', used_at = NOW(), updated_at = NOW()
-       WHERE id = ANY($1) AND status = 'ACTIVE'`,
+      `UPDATE vouchers SET status = 'USED', used_at = NOW(), updated_at = NOW() WHERE id = ANY($1) AND status = 'ACTIVE'`,
       [voucherIds],
     );
   }
-
   return { expired_count: result.rowCount };
 };
 
@@ -333,10 +292,11 @@ const expireStaleSessions = async () => {
 // ============================================================
 const syncActiveSessionsFromMikroTik = async () => {
   try {
+    // 1. KAZI YA USALAMA: Futa sessions zote ACTIVE ambazo muda wake umekwisha (DB pekee)
     // ============================================================
-    // 1. KAZI YA USALAMA: Futa sessions zote ACTIVE ambazo muda wake umekwisha
+    // 1. KAZI YA USALAMA: Futa sessions ACTIVE zilizokwisha muda NA uweke vocha kuwa USED
     // ============================================================
-    await db.query(`
+    const expiredSessions = await db.query(`
       UPDATE sessions
       SET status = 'EXPIRED', logout_at = NOW(), updated_at = NOW()
       WHERE status = 'ACTIVE'
@@ -344,11 +304,21 @@ const syncActiveSessionsFromMikroTik = async () => {
           SELECT (v.duration_minutes || ' minutes')::interval
           FROM vouchers v WHERE v.id = sessions.voucher_id
         )
+      RETURNING voucher_id
     `);
 
-    console.log(
-      "🔄 [Sync] Inajaribu kusoma Active Sessions kutoka MikroTik...",
-    );
+    if (expiredSessions.rowCount > 0) {
+      const vIds = expiredSessions.rows.map((r) => r.voucher_id);
+      // HAPA NDIO TUNABADILISHA VOCHA KUWA USED
+      await db.query(
+        `UPDATE vouchers SET status = 'USED', used_at = NOW(), updated_at = NOW() WHERE id = ANY($1) AND status = 'ACTIVE'`,
+        [vIds],
+      );
+      console.log(
+        `⚠️ [Sync] Vocha ${expiredSessions.rowCount} zimeisha muda na kuwekwa USED.`,
+      );
+    }
+    // ============================================================
 
     // 2. Pata active sessions kutoka MikroTik
     const mtSessions = await mikrotikClient.getActiveHotspotSessions();
@@ -363,34 +333,27 @@ const syncActiveSessionsFromMikroTik = async () => {
     const dbActiveRes = await db.query(
       "SELECT id, voucher_id, mikrotik_session_id FROM sessions WHERE status = 'ACTIVE'",
     );
-
     for (const dbSess of dbActiveRes.rows) {
       if (
         !dbSess.mikrotik_session_id ||
         !mtSessionIds.includes(dbSess.mikrotik_session_id)
       ) {
-        console.log(`⚠️ [Sync] Session imekufa. Inafungwa...`);
-
         await db.query(
           `UPDATE sessions SET status = 'DISCONNECTED', logout_at = NOW(), updated_at = NOW() WHERE id = $1`,
           [dbSess.id],
         );
-
         await db.query(
           `UPDATE vouchers SET status = 'USED', used_at = NOW(), updated_at = NOW() WHERE id = $1`,
           [dbSess.voucher_id],
         );
       }
     }
-    // ============================================================
 
-    if (mtSessionsArray.length === 0) {
-      console.log("🔄 [Sync] Hakuna active sessions kwenye MikroTik.");
-      return { synced: 0 };
-    }
+    if (mtSessionsArray.length === 0) return { synced: 0 };
 
     let syncedCount = 0;
 
+    // 4. Sindika sessions zilizopo kwenye MikroTik
     for (const mt of mtSessionsArray) {
       try {
         const voucherCode = mt.user;
@@ -401,28 +364,20 @@ const syncActiveSessionsFromMikroTik = async () => {
 
         if (!voucherCode) continue;
 
-        // 4. Tafuta voucher kwenye Database yetu
         const voucherRes = await db.query(
           "SELECT id, site_id, status, package_id, price, duration_minutes FROM vouchers WHERE code = $1",
           [voucherCode],
         );
-
         if (voucherRes.rowCount === 0) continue;
         const voucher = voucherRes.rows[0];
 
-        // 5. Badilisha status ya voucher kuwa ACTIVE na unda Sale
-        if (
-          voucher.status === "AVAILABLE" ||
-          voucher.status === "SOLD" ||
-          voucher.status === "CREATED"
-        ) {
-          if (voucher.status === "AVAILABLE" || voucher.status === "CREATED") {
+        // Auto-Sale na Update Vocha
+        if (["AVAILABLE", "SOLD", "CREATED"].includes(voucher.status)) {
+          if (["AVAILABLE", "CREATED"].includes(voucher.status)) {
             const saleRes = await db.query(
-              `INSERT INTO sales (site_id, voucher_id, package_id, amount, notes)
-               VALUES ($1, $2, $3, $4, 'Auto-sale: Mteja ameingia na vocha') RETURNING id`,
+              `INSERT INTO sales (site_id, voucher_id, package_id, amount, notes) VALUES ($1, $2, $3, $4, 'Auto-sale: Mteja ameingia') RETURNING id`,
               [voucher.site_id, voucher.id, voucher.package_id, voucher.price],
             );
-
             await db.query(
               `INSERT INTO payments (sale_id, amount, method) VALUES ($1, $2, 'CASH')`,
               [saleRes.rows[0].id, voucher.price],
@@ -431,78 +386,75 @@ const syncActiveSessionsFromMikroTik = async () => {
               `💰 [Sync] Sale ya kiotomatiki imeundwa kwa voucher ${voucherCode}`,
             );
           }
-
           await db.query(
             `UPDATE vouchers SET status = 'ACTIVE', activated_at = NOW(), updated_at = NOW() WHERE id = $1`,
             [voucher.id],
           );
         }
 
-        // 6. Hesabu muda
-        let durationSeconds = 0;
+        // Hesabu muda
+        let mtDurationSeconds = 0;
         const match = uptimeStr.match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/);
         if (match) {
-          const h = parseInt(match[1] || 0, 10);
-          const m = parseInt(match[2] || 0, 10);
-          const s = parseInt(match[3] || 0, 10);
-          durationSeconds = h * 3600 + m * 60 + s;
+          mtDurationSeconds =
+            parseInt(match[1] || 0, 10) * 3600 +
+            parseInt(match[2] || 0, 10) * 60 +
+            parseInt(match[3] || 0, 10);
         }
 
         const bytesIn = parseInt(mt["bytes-in"] || 0, 10);
         const bytesOut = parseInt(mt["bytes-out"] || 0, 10);
         const dataUsedMb = (bytesIn + bytesOut) / (1024 * 1024);
 
-        // 7. Ulinzi: Kama mteja amezidi muda, mtoe kwa nguvu!
+        const sessionRes = await db.query(
+          `SELECT id, login_at FROM sessions WHERE mikrotik_session_id = $1`,
+          [mtId],
+        );
+
+        // Chukua muda wa Database (saa halisi) kama session ipo
+        let finalDurationSeconds = mtDurationSeconds;
+        if (sessionRes.rowCount > 0) {
+          const loginAt = new Date(sessionRes.rows[0].login_at).getTime();
+          finalDurationSeconds = Math.floor((Date.now() - loginAt) / 1000);
+        }
+
         const totalAllowedSeconds = voucher.duration_minutes * 60;
-        if (durationSeconds > totalAllowedSeconds) {
+
+        // Ulinzi: Mteja amezidi muda?
+        if (finalDurationSeconds > totalAllowedSeconds) {
           console.log(
             `⚠️ [Sync] Mteja ${voucherCode} amezidi muda. Tunamtoa...`,
           );
           await mikrotikClient.disconnectHotspotSession(mtId);
 
-          const existingSession = await db.query(
-            `SELECT id FROM sessions WHERE mikrotik_session_id = $1 OR (mac_address = $2 AND status = 'ACTIVE')`,
-            [mtId, mac],
-          );
-
-          if (existingSession.rowCount > 0) {
+          if (sessionRes.rowCount > 0) {
             await db.query(
               `UPDATE sessions SET status = 'EXPIRED', duration_seconds = $1, logout_at = NOW() WHERE id = $2`,
-              [durationSeconds, existingSession.rows[0].id],
+              [finalDurationSeconds, sessionRes.rows[0].id],
             );
           }
-
           await db.query(
             `UPDATE vouchers SET status = 'USED', used_at = NOW(), updated_at = NOW() WHERE id = $1`,
             [voucher.id],
           );
-          continue; // Ruka hatua zingine
+          continue;
         }
 
-        // 8. Angalia kama session hii ipo kwenye Database
-        const sessionRes = await db.query(
-          `SELECT id FROM sessions WHERE mikrotik_session_id = $1`,
-          [mtId],
-        );
-
+        // Ingiza au Update Session
         if (sessionRes.rowCount === 0) {
-          // Kama haipo, futa ile ya zamani yenye MAC hii (kama ipo)
           await db.query(
             `UPDATE sessions SET status = 'DISCONNECTED', logout_at = NOW() WHERE mac_address = $1 AND status = 'ACTIVE'`,
             [mac],
           );
-
-          // Ingiza Session mpya
           await db.query(
-            `INSERT INTO sessions (site_id, voucher_id, mikrotik_session_id, ip_address, mac_address, status, login_at, duration_seconds, data_used_mb)
-             VALUES ($1, $2, $3, $4, $5, 'ACTIVE', NOW() - ($6::int * INTERVAL '1 second'), $6::int, $7::numeric)`,
+            `INSERT INTO sessions (site_id, voucher_id, mikrotik_session_id, ip_address, mac_address, status, login_at, duration_seconds, data_used_mb) VALUES ($1, $2, $3, $4, $5, 'ACTIVE', NOW() - ($6::int * INTERVAL '1 second'), $6::int, $7::numeric)`,
             [
               voucher.site_id,
               voucher.id,
               mtId,
               ip,
               mac,
-              durationSeconds,
+              mtDurationSeconds,
               dataUsedMb,
             ],
           );
@@ -511,13 +463,9 @@ const syncActiveSessionsFromMikroTik = async () => {
           );
           syncedCount++;
         } else {
-          // Kama ipo, update muda
           await db.query(
             `UPDATE sessions SET duration_seconds = $1::int, data_used_mb = $2::numeric, status = 'ACTIVE', updated_at = NOW() WHERE id = $3`,
-            [durationSeconds, dataUsedMb, sessionRes.rows[0].id],
-          );
-          console.log(
-            `✅ [Sync] Session ya voucher ${voucherCode} ime-update muda wake.`,
+            [finalDurationSeconds, dataUsedMb, sessionRes.rows[0].id],
           );
         }
       } catch (loopErr) {
@@ -528,15 +476,13 @@ const syncActiveSessionsFromMikroTik = async () => {
       }
     }
 
-    console.log(
-      `🔄 [Sync] Imemaliza. Sessions mpya zilizoongezwa: ${syncedCount}`,
-    );
     return { synced: syncedCount };
   } catch (err) {
     console.error(
       "❌ [Sync] Kuna kosa wakati wa kusoma kutoka MikroTik:",
       err.message,
     );
+    return { synced: 0, error: err.message };
   }
 };
 
