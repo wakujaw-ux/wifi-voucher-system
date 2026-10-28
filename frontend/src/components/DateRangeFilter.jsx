@@ -50,6 +50,12 @@ const DateRangeFilter = ({
           Miezi 3
         </button>
         <button
+          onClick={() => setQuick(180)}
+          className="text-xs px-3 py-1 border border-gray-300 rounded-full hover:bg-gray-50"
+        >
+          Miezi 6
+        </button>
+        <button
           onClick={() => setQuick(365)}
           className="text-xs px-3 py-1 border border-gray-300 rounded-full hover:bg-gray-50"
         >
