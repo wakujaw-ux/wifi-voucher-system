@@ -48,20 +48,19 @@ const CHART_COLORS = [
 
 const Reports = () => {
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState(
-    searchParams.get("tab") || "sales",
-  );
-  const [loading, setLoading] = useState(false);
+  const initialTab = searchParams.get("tab") || "sales";
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  const [loading, setLoading] = useState(true); // Weka true mwanzo
   const [data, setData] = useState(null);
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [appliedFilters, setAppliedFilters] = useState({});
 
+  // Tumia useCallback bila kubadilisha 'data' kuwa null kila mara
   const fetchReport = useCallback(async () => {
     setLoading(true);
-    setData(null);
-
     try {
       const filters = { ...appliedFilters };
       let response;
@@ -91,6 +90,7 @@ const Reports = () => {
     }
   }, [activeTab, appliedFilters]);
 
+  // Hii inahakikisha inafetch kila tab inapobadilika
   useEffect(() => {
     fetchReport();
   }, [fetchReport]);
@@ -107,7 +107,6 @@ const Reports = () => {
     setToDate("");
     setAppliedFilters({});
   };
-
   const formatCurrency = (value) => {
     const num = parseFloat(value);
     const safe = isNaN(num) ? 0 : num;
@@ -168,7 +167,7 @@ const Reports = () => {
               link.remove();
               window.URL.revokeObjectURL(url);
             } catch (err) {
-              alert("Imeshindwa kupakua ripoti. Jaribu tena.");
+              alert(err.message || "Imeshindwa kupakua ripoti. Jaribu tena.");
             }
           }}
           className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition"
