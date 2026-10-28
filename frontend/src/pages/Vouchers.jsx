@@ -198,11 +198,16 @@ const Vouchers = () => {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3 mb-6">
           <StatMini label="Zote" value={stats.total} color="text-gray-700" />
           <StatMini
+            label="Created"
+            value={stats.CREATED}
+            color="text-gray-500"
+          />
+          <StatMini
             label="Available"
-            value={stats.AVAILABLE + stats.CREATED}
+            value={stats.AVAILABLE}
             color="text-blue-600"
           />
           <StatMini label="Sold" value={stats.SOLD} color="text-yellow-600" />
@@ -212,6 +217,11 @@ const Vouchers = () => {
             color="text-green-600"
           />
           <StatMini label="Used" value={stats.USED} color="text-purple-600" />
+          <StatMini
+            label="Expired"
+            value={stats.EXPIRED}
+            color="text-orange-600"
+          />
           <StatMini
             label="Revoked"
             value={stats.REVOKED}
