@@ -52,7 +52,7 @@ const Vouchers = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [packageFilter, setPackageFilter] = useState("");
 
-  // Modal
+  // Modal ya Kuzalisha
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [generating, setGenerating] = useState(false);
 
@@ -119,7 +119,7 @@ const Vouchers = () => {
     }
   };
 
-  // Sell
+  // Sell (Kuuza kwa kubonyeza Shopping Cart)
   const handleSell = async (voucher) => {
     if (
       !window.confirm(
@@ -134,7 +134,7 @@ const Vouchers = () => {
         payment_method: "CASH",
       });
       toast.success(`Voucher ${voucher.code} imeuzwa`);
-      fetchData();
+      fetchData(); // Refresh table
     } catch (err) {
       toast.error(err.response?.data?.message || "Imeshindwa kuuza");
     }
@@ -158,48 +158,41 @@ const Vouchers = () => {
 
   return (
     <div>
-      {/* Header */}
+      {/* Header - Vitufe vimepangwa vizuri */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Vouchers</h1>
           <p className="text-gray-500 mt-1">Kusimamia vocha za Wi-Fi</p>
         </div>
 
-        <div className="flex gap-2">
-          
-            <button
-              onClick={fetchData}
-              disabled={loading}
-              className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </button>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
 
-          {/* ONGEZA HII */}
-          <div> {/* Nyongeza*/}
           <button
             onClick={() => navigate("/vouchers/print?status=AVAILABLE")}
-            className="inline-flex items-center gap-2 bg-orange-100 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition"
+            className="inline-flex items-center gap-2 bg-orange-100 border border-gray-300 hover:bg-orange-200 text-gray-700 font-medium px-4 py-2 rounded-lg transition"
             title="Chapisha vocha zilizopo"
           >
             <Printer className="w-4 h-4" />
             Chapisha
           </button>
-        </div>
-         <div>
-        {canGenerate && (
-          <button
-            onClick={() => setShowGenerateModal(true)}
-            className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition"
-          >
-            <Plus className="w-4 h-4" />
-            Zalisha Vocha
-          </button>
-        )}
+
+          {canGenerate && (
+            <button
+              onClick={() => setShowGenerateModal(true)}
+              className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition"
+            >
+              <Plus className="w-4 h-4" />
+              Zalisha Vocha
+            </button>
+          )}
         </div>
       </div>
 
@@ -346,17 +339,20 @@ const Vouchers = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {/* KITUFE CHA KUUZA (SHOPPING CART) */}
                         {canSell &&
                           (v.status === "CREATED" ||
                             v.status === "AVAILABLE") && (
                             <button
                               onClick={() => handleSell(v)}
                               className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                              title="Uza"
+                              title="Uza Vocha Hii"
                             >
                               <ShoppingCart className="w-4 h-4" />
                             </button>
                           )}
+
+                        {/* KITUFE CHA REVOKE (BAN) */}
                         {canRevoke &&
                           v.status !== "REVOKED" &&
                           v.status !== "USED" &&
