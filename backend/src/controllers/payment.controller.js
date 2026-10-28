@@ -1,66 +1,11 @@
+const db = require("../config/database");
 const paymentService = require("../services/payment.service");
 const { success, error } = require("../utils/response");
-const db = require("../config/database");
 
-const mockPay = async (req, res) => {
-  const { phone, package_id, site_id, method } = req.body;
-
-  if (!phone || !package_id || !site_id) {
-    return error(
-      res,
-      "phone, package_id na site_id vinahitajika",
-      "VALIDATION_ERROR",
-      400,
-    );
-  }
-
-  // Kagua muundo wa namba ya simu
-  const phoneRegex = /^0[0-9]{9}$/;
-  if (!phoneRegex.test(phone)) {
-    return error(
-      res,
-      "Muundo wa namba ya simu si sahihi",
-      "INVALID_PHONE",
-      400,
-    );
-  }
-
-  const paymentMethod = method || "MPESA";
-  const allowedMethods = [
-    "CASH",
-    "MPESA",
-    "AIRTEL_MONEY",
-    "TIGO_PESA",
-    "HALOPESA",
-    "BANK",
-  ];
-
-  if (!allowedMethods.includes(paymentMethod)) {
-    return error(res, "Njia ya malipo haijulikani", "VALIDATION_ERROR", 400);
-  }
-
-  try {
-    const result = await paymentService.processMockPayment(
-      phone,
-      package_id,
-      site_id,
-      paymentMethod,
-    );
-    return success(res, result, "Malipo yamekamilika kwa mafanikio");
-  } catch (err) {
-    // Kama kifurushi hakipo (imekamatwa kwenye payment.service.js)
-    if (err.message === "Kifurushi hakipo") {
-      return error(res, err.message, "PACKAGE_NOT_FOUND", 404);
-    }
-    return error(res, err.message, "PAYMENT_FAILED", 500);
-  }
-};
-
-// Pata packages kwa ajili ya mteja (Public)
 const getPublicPackages = async (req, res) => {
   try {
     const result = await db.query(
-      "SELECT id, name, description, price, duration_minutes FROM packages WHERE is_active = TRUE ORDER BY price ASC",
+      "SELECT id, name, price, duration_minutes FROM packages WHERE is_active = TRUE ORDER BY price ASC",
     );
     return success(res, { packages: result.rows }, "Packages zimepatikana");
   } catch (err) {
@@ -68,4 +13,24 @@ const getPublicPackages = async (req, res) => {
   }
 };
 
-module.exports = { mockPay, getPublicPackages };
+const mockPay = async (req, res) => {
+  const { phone, package_id, site_id, method } = req.body;
+
+  if (!phone || !package_id || !site_id) {
+    return error(res, "Taarifa hazijakamilika", "VALIDATION_ERROR", 400);
+  }
+
+  try {
+    const result = await paymentService.processMockPayment(
+      phone,
+      package_id,
+      site_id,
+      method || "MPESA",
+    );
+    return success(res, result, "Malipo yamekamilika");
+  } catch (err) {
+    return error(res, err.message, "PAYMENT_FAILED", 500);
+  }
+};
+
+module.exports = { getPublicPackages, mockPay };
