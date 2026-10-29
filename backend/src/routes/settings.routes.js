@@ -17,4 +17,7 @@ router.get(
 router.put("/", requireRole("SUPER_ADMIN"), settingsController.updateBulk);
 router.put("/:key", requireRole("SUPER_ADMIN"), settingsController.update);
 
+// Ruhusu mteja kupata site_id bila kuwa amelogin (kwa ajili ya Public Portal)
+router.get("/public/site", settingsController.getDefaultSite);
+
 module.exports = router;

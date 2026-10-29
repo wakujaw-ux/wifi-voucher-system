@@ -1,5 +1,6 @@
 const settingsService = require("../services/settings.service");
 const { success, error } = require("../utils/response");
+const db = require("../config/database");
 
 // GET /api/settings
 const getAll = async (req, res) => {
@@ -81,5 +82,20 @@ const updateBulk = async (req, res) => {
     );
   }
 };
+const getDefaultSite = async (req, res) => {
+  try {
+    const result = await db.query(
+      "SELECT id, name, code FROM sites WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 1",
+    );
 
-module.exports = { getAll, getOne, update, updateBulk };
+    if (result.rowCount === 0) {
+      return error(res, "Hakuna site iliyosajiliwa", "SITE_NOT_FOUND", 404);
+    }
+
+    return success(res, { site: result.rows[0] }, "Site imepatikana");
+  } catch (err) {
+    return error(res, err.message, "FETCH_FAILED", 500);
+  }
+};
+
+module.exports = { getAll, getOne, update, updateBulk, getDefaultSite };
