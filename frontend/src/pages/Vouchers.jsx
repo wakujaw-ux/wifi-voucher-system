@@ -55,6 +55,7 @@ const Vouchers = () => {
   // Modal ya Kuzalisha
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [selling, setSelling] = useState("");
 
   const canGenerate = ["ADMIN", "SUPER_ADMIN"].includes(user?.role);
   const canSell = ["ADMIN", "SUPER_ADMIN", "OPERATOR"].includes(user?.role);
@@ -121,6 +122,7 @@ const Vouchers = () => {
 
   // Sell (Kuuza kwa kubonyeza Shopping Cart)
   const handleSell = async (voucher) => {
+    setSelling(true);
     if (
       !window.confirm(
         `Uza voucher ${voucher.code} kwa TZS ${parseFloat(voucher.price).toLocaleString()}?`,
@@ -137,6 +139,8 @@ const Vouchers = () => {
       fetchData(); // Refresh table
     } catch (err) {
       toast.error(err.response?.data?.message || "Imeshindwa kuuza");
+    } finally {
+      setSelling(false);
     }
   };
 
@@ -187,6 +191,7 @@ const Vouchers = () => {
           {canGenerate && (
             <button
               onClick={() => setShowGenerateModal(true)}
+              disabled={generating}
               className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition"
             >
               <Plus className="w-4 h-4" />
@@ -355,6 +360,7 @@ const Vouchers = () => {
                             v.status === "AVAILABLE") && (
                             <button
                               onClick={() => handleSell(v)}
+                              disabled={loading}
                               className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
                               title="Uza Vocha Hii"
                             >
