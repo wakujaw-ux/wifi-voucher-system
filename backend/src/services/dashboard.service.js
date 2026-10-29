@@ -1,5 +1,5 @@
-const { parse } = require('dotenv');
-const db = require('../config/database');
+const { parse } = require("dotenv");
+const db = require("../config/database");
 
 // ============================================================
 // SUMMARY - Muhtasari mmoja kwa dashboard
@@ -7,7 +7,7 @@ const db = require('../config/database');
 const getSummary = async (filters = {}) => {
   const { site_id } = filters;
   const params = [];
-  let whereSql = 'WHERE 1 = 1';
+  let whereSql = "WHERE 1 = 1";
 
   if (site_id) {
     whereSql += ` AND site_id = $1`;
@@ -39,7 +39,7 @@ const getSummary = async (filters = {}) => {
     SELECT
       COUNT(*)::int AS total,
       COUNT(*) FILTER (WHERE status IN ('CREATED', 'AVAILABLE'))::int AS available,
-      COUNT(*) FILTER (WHERE status = 'SOLD')::int AS sold,
+      COUNT(*) FILTER (WHERE status IN ('SOLD', 'ACTIVE', 'USED', 'EXPIRED'))::int AS sold,
       COUNT(*) FILTER (WHERE status = 'ACTIVE')::int AS active,
       COUNT(*) FILTER (WHERE status = 'USED')::int AS used,
       COUNT(*) FILTER (WHERE status = 'EXPIRED')::int AS expired,
@@ -76,24 +76,23 @@ const getSummary = async (filters = {}) => {
   const totalRevenue = safeParseFloat(totalSales.total_revenue);
   const totalExpenses = safeParseFloat(expenses.total_expenses);
   const totalProfit = totalRevenue - totalExpenses;
-  const marginPercent = totalRevenue > 0
-    ? ((totalProfit / totalRevenue) * 100).toFixed(2)
-    : '0.00';
+  const marginPercent =
+    totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(2) : "0.00";
 
   return {
     sales: {
       today_count: todaySales.today_count || 0,
-      today_revenue: todaySales.today_revenue || '0',
+      today_revenue: todaySales.today_revenue || "0",
       total_count: totalSales.total_count || 0,
-      total_revenue: totalSales.total_revenue || '0',
+      total_revenue: totalSales.total_revenue || "0",
     },
     vouchers,
     users: {
       online_users: sessions.online_users || 0,
     },
     expenses: {
-      today: expenses.today_expenses || '0',
-      total: expenses.total_expenses || '0',
+      today: expenses.today_expenses || "0",
+      total: expenses.total_expenses || "0",
     },
     profit: {
       total: totalProfit.toFixed(2),
@@ -106,18 +105,18 @@ const getSummary = async (filters = {}) => {
 // SALES CHART - Data ya chart (mauzo kwa siku)
 // ===============================================================
 const getSalesChart = async (filters = {}) => {
-    const { site_id, days = 7 } = filters;
-    const params = [];
-    let whereSql = 'WHERE s.created_at >= NOW() - INTERVAL \'1 day\' *$1';
+  const { site_id, days = 7 } = filters;
+  const params = [];
+  let whereSql = "WHERE s.created_at >= NOW() - INTERVAL '1 day' *$1";
 
-    params.push(parseInt(days, 10));
+  params.push(parseInt(days, 10));
 
-    if (site_id) {
-        whereSql += `AND s.site_id = $2`;
-        params.push(site_id);
-    }
+  if (site_id) {
+    whereSql += `AND s.site_id = $2`;
+    params.push(site_id);
+  }
 
-    const sql = `
+  const sql = `
     SELECT
     DATE(s.created_at) AS date,
     COUNT(*)::int AS sales_count,
@@ -127,24 +126,24 @@ const getSalesChart = async (filters = {}) => {
     GROUP BY DATE(s.created_at)
     ORDER BY DATE(s.created_at) ASC`;
 
-    const result = await db.query(sql, params);
-    return result.rows;
+  const result = await db.query(sql, params);
+  return result.rows;
 };
 
 // ================================================================
 // VOUCHER STATS
 // ================================================================
 const getVoucherStats = async (filters = {}) => {
-    const { site_id } = filters;
-    const params = [];
-    let whereSql = 'WHERE 1 = 1';
+  const { site_id } = filters;
+  const params = [];
+  let whereSql = "WHERE 1 = 1";
 
-    if (site_id) {
-        whereSql += ` AND site_id = $1`;
-        params.push(site_id);
-    }
+  if (site_id) {
+    whereSql += ` AND site_id = $1`;
+    params.push(site_id);
+  }
 
-    const sql = `SELECT
+  const sql = `SELECT
     status, COUNT(*)::int AS count,
     COALESCE(SUM(price), 0)::numeric AS value
     FROM vouchers
@@ -152,26 +151,26 @@ const getVoucherStats = async (filters = {}) => {
     GROUP BY status
     ORDER BY status`;
 
-    const result = await db.query(sql, params);
-    return result.rows;
+  const result = await db.query(sql, params);
+  return result.rows;
 };
 
 // =================================================================
 // RECENT ACTIVITY - Matukio ya hivi karibuni
 // =================================================================
 const getRecentActivity = async (filters = {}) => {
-    const { site_id, limit = 10 } = filters;
-    const params = [];
-    let whereSql = 'WHERE 1 = 1';
+  const { site_id, limit = 10 } = filters;
+  const params = [];
+  let whereSql = "WHERE 1 = 1";
 
-    if (site_id) {
-        whereSql += ` AND s.site_id = $1`;
-        params.push(site_id);
-    }
+  if (site_id) {
+    whereSql += ` AND s.site_id = $1`;
+    params.push(site_id);
+  }
 
-    params.push(parseInt(limit, 10));
+  params.push(parseInt(limit, 10));
 
-    const sql = `SELECT
+  const sql = `SELECT
     s.id,
     'SALE' AS type,
     s.amount,
@@ -188,26 +187,26 @@ const getRecentActivity = async (filters = {}) => {
     ORDER BY s.created_at DESC
     LIMIT $${params.length}`;
 
-    const result = await db.query(sql, params);
-    return result.rows;
+  const result = await db.query(sql, params);
+  return result.rows;
 };
 
 // ========================================================
 // TOP PACKAGES
 // ========================================================
 const getTopPackages = async (filters = {}) => {
-    const { site_id, limit = 5 } = filters;
-    const params = [];
-    let whereSql = 'WHERE 1 = 1';
+  const { site_id, limit = 5 } = filters;
+  const params = [];
+  let whereSql = "WHERE 1 = 1";
 
-    if (site_id) {
-        whereSql += `AND s.site_id = $1`;
-        params.push(site_id);
-    }
+  if (site_id) {
+    whereSql += `AND s.site_id = $1`;
+    params.push(site_id);
+  }
 
-    params.push(parseInt(limit, 10));
+  params.push(parseInt(limit, 10));
 
-    const sql = `SELECT
+  const sql = `SELECT
    p.id AS package_id,
    p.name AS package_name,
    COUNT(s.id)::int AS sales_count,
@@ -219,10 +218,14 @@ const getTopPackages = async (filters = {}) => {
    ORDER BY sales_count DESC
    LIMIT $${params.length}`;
 
-   const result = await db.query(sql, params);
-   return result.rows;
+  const result = await db.query(sql, params);
+  return result.rows;
 };
 
 module.exports = {
-    getSummary, getSalesChart, getVoucherStats, getRecentActivity, getTopPackages,
+  getSummary,
+  getSalesChart,
+  getVoucherStats,
+  getRecentActivity,
+  getTopPackages,
 };

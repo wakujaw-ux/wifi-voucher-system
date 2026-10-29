@@ -21,6 +21,12 @@ const processMockPayment = async (phone, packageId, siteId, method) => {
 
     const result = await voucherService.generateVouchers(generateData, null);
     const voucher = result.vouchers[0];
+    // Badilisha vocha kuwa SOLD kwa sababu mteja amelipia
+    await db.query(
+      `UPDATE vouchers SET status = 'SOLD', sold_at = NOW() WHERE id = $1`,
+      [voucher.id],
+    );
+    voucher.status = "SOLD";
 
     // Rekodi Sale na Payment
     const saleRes = await db.query(

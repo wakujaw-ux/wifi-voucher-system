@@ -217,10 +217,10 @@ const syncActiveSessionsFromMikroTik = async () => {
             await mikrotikClient.disableHotspotUser(dbSess.code);
           } catch (e) {}
         }
-
+        const finalDuration = parseInt(dbSess.duration_minutes, 10) * 60;
         await db.query(
-          `UPDATE sessions SET status = 'EXPIRED', logout_at = NOW() WHERE id = $1`,
-          [dbSess.id],
+          `UPDATE sessions SET status = 'EXPIRED', logout_at = NOW(), duration_seconds = $1 WHERE id = $2`,
+          [finalDuration, dbSess.id],
         );
         await db.query(
           `UPDATE vouchers SET status = 'USED', used_at = NOW() WHERE id = $1`,
@@ -237,9 +237,14 @@ const syncActiveSessionsFromMikroTik = async () => {
         console.log(
           `ℹ️ [Sync] Mteja ${dbSess.code} amedisconnect. Vocha inabaki ACTIVE.`,
         );
+        const elapsed = Math.floor(
+          (Date.now() -
+            new Date(dbSess.activated_at || dbSess.login_at).getTime()) /
+            1000,
+        );
         await db.query(
-          `UPDATE sessions SET status = 'DISCONNECTED', logout_at = NOW() WHERE id = $1`,
-          [dbSess.id],
+          `UPDATE sessions SET status = 'DISCONNECTED', logout_at = NOW(), duration_seconds = $1 WHERE id = $2`,
+          [elapsed, dbSess.id],
         );
         // Hapa hatugusi Vocha. Inabaki ACTIVE hadi muda uishe.
       }
@@ -293,6 +298,12 @@ const syncActiveSessionsFromMikroTik = async () => {
             );
           }
           // Washa Vocha na weka activated_at
+          await db.query(
+            `UPDATE vouchers SET status = 'ACTIVE', activated_at = NOW() WHERE id = $1`,
+            [voucher.id],
+          );
+          // Kama vocha ni SOLD (Mteja kalipa online) badili kuwa ACTIVE
+        } else if (voucher.status === "SOLD") {
           await db.query(
             `UPDATE vouchers SET status = 'ACTIVE', activated_at = NOW() WHERE id = $1`,
             [voucher.id],
