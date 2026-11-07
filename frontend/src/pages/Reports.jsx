@@ -5,10 +5,10 @@ import {
   DollarSign,
   Ticket,
   RefreshCw,
-  // Wallet,
   ShoppingCart,
   ArrowUpRight,
   ArrowDownRight,
+  Download,
 } from "lucide-react";
 import {
   BarChart,
@@ -26,7 +26,6 @@ import {
 import toast from "react-hot-toast";
 import { reportApi } from "../api/report.api";
 import DateRangeFilter from "../components/DateRangeFilter";
-import { Download } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import client from "../api/client";
 
@@ -51,14 +50,13 @@ const Reports = () => {
   const initialTab = searchParams.get("tab") || "sales";
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  const [loading, setLoading] = useState(true); // Weka true mwanzo
+  const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [appliedFilters, setAppliedFilters] = useState({});
 
-  // Tumia useCallback bila kubadilisha 'data' kuwa null kila mara
   const fetchReport = useCallback(async () => {
     setLoading(true);
     try {
@@ -90,23 +88,58 @@ const Reports = () => {
     }
   }, [activeTab, appliedFilters]);
 
-  // Hii inahakikisha inafetch kila tab inapobadilika
   useEffect(() => {
     fetchReport();
   }, [fetchReport]);
 
-  const handleApply = () => {
+  const handleApply = (quickFrom, quickTo) => {
+    // Kama quickFrom ni Event (kutoka kwenye kitufe cha Tumia), chukua state ya sasa
+    const isEvent = quickFrom && quickFrom.nativeEvent;
+
+    const finalFrom = isEvent ? fromDate : quickFrom;
+    const finalTo = isEvent ? toDate : quickTo;
+
     setAppliedFilters({
-      from_date: fromDate || undefined,
-      to_date: toDate ? toDate + "T23:59:59" : undefined,
+      from_date: finalFrom || undefined,
+      to_date: finalTo ? finalTo + "T23:59:59" : undefined,
     });
   };
-
   const handleClear = () => {
     setFromDate("");
     setToDate("");
     setAppliedFilters({});
   };
+
+  // HAPA NDIPO FUNCTION YA DOWNLOAD INATAKIWA IWE
+  const handleDownload = async () => {
+    try {
+      const params = new URLSearchParams();
+      params.append("type", activeTab);
+      if (appliedFilters.from_date)
+        params.append("from_date", appliedFilters.from_date);
+      if (appliedFilters.to_date)
+        params.append("to_date", appliedFilters.to_date);
+
+      const response = await client.get(
+        `/reports/export?${params.toString()}`,
+        {
+          responseType: "blob",
+        },
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Ripoti_${activeTab}_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Imeshindwa kupakua ripoti");
+    }
+  };
+
   const formatCurrency = (value) => {
     const num = parseFloat(value);
     const safe = isNaN(num) ? 0 : num;
@@ -135,56 +168,31 @@ const Reports = () => {
           </p>
         </div>
 
-        {/* KITUFE CHA EXPORT CSV KINAANZIA HAPA */}
-        <button
-          onClick={async () => {
-            try {
-              // Chukua vichujio (filters) vya sasa
-              const queryString = new URLSearchParams(
-                appliedFilters,
-              ).toString();
-
-              // Tuma ombi kwa backend ikitaka faili la blob (binary)
-              const response = await client.get(
-                `/reports/sales/export?${queryString}`,
-                {
-                  responseType: "blob",
-                },
-              );
-
-              // Tengeneza link ya kupakua faili
-              const url = window.URL.createObjectURL(new Blob([response.data]));
-              const link = document.createElement("a");
-              link.href = url;
-              link.setAttribute(
-                "download",
-                `Ripoti_Mauzo_${new Date().toISOString().split("T")[0]}.xlsx`,
-              );
-              document.body.appendChild(link);
-              link.click();
-
-              // Safisha
-              link.remove();
-              window.URL.revokeObjectURL(url);
-            } catch (err) {
-              alert(err.message || "Imeshindwa kupakua ripoti. Jaribu tena.");
-            }
-          }}
-          className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition"
-        >
-          <Download className="w-4 h-4" />
-          Download Excel (.xlsx)
-        </button>
-
-        <button
-          onClick={fetchReport}
-          disabled={loading}
-          className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
-      </div>
+        <div className="flex gap-2">
+          {/* KITUFE CHA EXPORT KILICHOREKEBISHWA */}
+         {/* <div className="inline-flex sm:items-center">*/}
+            <button
+              onClick={handleDownload}
+              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-center font-medium px-4 py-2 rounded-lg transition"
+            >
+              <Download className="w-4 h-4" />
+              Download Ripoti
+            </button>
+          </div>
+          <div className="inline-flex  sm:justify-end">
+            <button
+              onClick={fetchReport}
+              disabled={loading}
+              className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </button>
+          </div>
+        </div>
+      {/*</div>*/}
       {/* Tabs */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm mb-4">
         <div className="flex overflow-x-auto border-b border-gray-100">
@@ -512,7 +520,6 @@ const VouchersReport = ({ data }) => {
 // REVENUE REPORT
 // ============================================================
 const RevenueReport = ({ data, formatCurrency }) => {
-  // Defensive checks
   const safeData = {
     total: data?.total || { total_transactions: 0, total_revenue: "0" },
     by_method: data?.by_method || [],
@@ -621,7 +628,6 @@ const RevenueReport = ({ data, formatCurrency }) => {
 // PROFIT & LOSS REPORT
 // ============================================================
 const ProfitLossReport = ({ data, formatCurrency }) => {
-  // Defensive checks
   const safeData = {
     status: data?.status || "BREAK_EVEN",
     profit: data?.profit || "0",
@@ -650,7 +656,6 @@ const ProfitLossReport = ({ data, formatCurrency }) => {
 
   return (
     <div className="space-y-6">
-      {/* Status Card */}
       <div className={`rounded-xl border-2 p-6 ${statusBg}`}>
         <div className="flex items-center justify-between">
           <div>
@@ -668,7 +673,6 @@ const ProfitLossReport = ({ data, formatCurrency }) => {
         </div>
       </div>
 
-      {/* Breakdown */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between">
@@ -699,7 +703,6 @@ const ProfitLossReport = ({ data, formatCurrency }) => {
         </div>
       </div>
 
-      {/* Period */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-sm text-gray-600">
         <span className="font-medium">Kipindi:</span>{" "}
         {safeData.period.from_date} – {safeData.period.to_date}

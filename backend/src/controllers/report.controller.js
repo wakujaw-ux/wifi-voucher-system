@@ -200,6 +200,30 @@ const exportSalesXlsx = async (req, res) => {
   }
 };
 
+const exportReport = async (req, res) => {
+  try {
+    const { type, from_date, to_date, site_id } = req.query;
+    if (!type) {
+      return error(res, "Aina ya ripoti inahitajika", "MISSING_TYPE", 400);
+    }
+    const filters = { from_date, to_date, site_id };
+    const buffer = await reportService.exportReportToExcel(filters, type);
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Ripoti_${type}_${Date.now()}.xlsx`,
+    );
+    res.send(buffer);
+  } catch (err) {
+    console.error("Export error:", err);
+    return error(res, err.message, "EXPORT_FAILED", 500);
+  }
+};
+
 module.exports = {
   getSales,
   getVouchers,
@@ -208,4 +232,5 @@ module.exports = {
   getExpenses,
   getProfitLoss,
   exportSalesXlsx,
+  exportReport,
 };

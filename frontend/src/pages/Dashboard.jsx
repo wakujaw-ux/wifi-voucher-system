@@ -10,10 +10,6 @@ import {
   RefreshCw,
   Plus,
   Wifi,
-  ArrowUpRight,
-  ArrowDownRight,
-  Package as PackageIcon,
-  Clock,
 } from "lucide-react";
 import {
   BarChart,

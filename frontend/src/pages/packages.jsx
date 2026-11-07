@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Plus,
   Edit,
   Trash2,
   Search,
   Package as PackageIcon,
+  ShoppingCart,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { packageApi } from "../api/package.api";
@@ -12,6 +13,7 @@ import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import PackageForm from "../components/PackageForm";
 import { useAuth } from "../context/AuthContext";
+import { voucherApi } from "../api/voucher.api";
 
 const Packages = () => {
   const { user } = useAuth();
@@ -28,34 +30,33 @@ const Packages = () => {
 
   // Ruhusa ya kuandika (create/update/delete)
   const canWrite = ["ADMIN", "SUPER_ADMIN"].includes(user?.role);
+  const canSell = ["ADMIN", "SUPER_ADMIN", "OPERATOR"].includes(user?.role);
 
-  // Pata packages
-  useEffect(() => {
-    const fetchPackages = async () => {
-      setLoading(true);
-      try {
-        const response = await packageApi.getAll();
-        setPackages(response.data.packages || []);
-      } catch (err) {
-        toast.error(
-          err.response?.data?.message || "Imeshindwa kupata packages",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPackages();
+  const fetchPackages = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await packageApi.getAll();
+      setPackages(response.data.packages || []);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Imeshindwa kupata packages");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchPackages();
+  }, [fetchPackages]);
 
   // Filter kwa search
   const filteredPackages = packages.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
   );
-
   // Unda / Sasisha
   const handleSubmit = async (data) => {
     setSubmitting(true);
+    let success = false;
+
     try {
       if (editing) {
         await packageApi.update(editing.id, data);
@@ -67,13 +68,17 @@ const Packages = () => {
         });
         toast.success("Package imeundwa");
       }
+      success = true;
       setShowModal(false);
       setEditing(null);
-      fetchPackages();
     } catch (err) {
       toast.error(err.response?.data?.message || "Imeshindwa kuhifadhi");
     } finally {
       setSubmitting(false);
+      // Tufanye fetch nje ya try/catch ili isilete meseji ya kosa mara mbili
+      if (success) {
+        fetchPackages();
+      }
     }
   };
 
@@ -81,15 +86,20 @@ const Packages = () => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+    let success = false;
+
     try {
       await packageApi.remove(deleteTarget.id);
       toast.success("Package imefutwa");
+      success = true;
       setDeleteTarget(null);
-      fetchPackages();
     } catch (err) {
       toast.error(err.response?.data?.message || "Imeshindwa kufuta");
     } finally {
       setDeleting(false);
+      if (success) {
+        fetchPackages();
+      }
     }
   };
 
@@ -101,6 +111,45 @@ const Packages = () => {
   const openEdit = (pkg) => {
     setEditing(pkg);
     setShowModal(true);
+  };
+
+  // Function ya Kuuza Vocha Moja kwa Moja
+  const handleQuickSell = async (pkg) => {
+    if (
+      !window.confirm(
+        `Uza vocha 1 ya ${pkg.name} kwa TZS ${parseFloat(pkg.price).toLocaleString()}?`,
+      )
+    )
+      return;
+
+    try {
+      toast.loading("Inazalisha na kuuza vocha...", { id: "quickSell" });
+
+      // 1. Zalisha vocha moja
+      const genRes = await voucherApi.generate({
+        site_id: pkg.site_id || "11111111-1111-1111-1111-111111111111",
+        package_id: pkg.id,
+        quantity: 1,
+        prefix: "SALE",
+        notes: "Quick Sale kutoka Packages",
+      });
+
+      const newVoucher = genRes.data.vouchers[0];
+      if (!newVoucher) throw new Error("Imeshindwa kuzalisha vocha");
+
+      // 2. Iuze papo hapo
+      await voucherApi.sell(newVoucher.id, {
+        payment_method: "CASH",
+      });
+
+      toast.success(`Vocha (${newVoucher.code}) ya ${pkg.name} imeuzwa!`, {
+        id: "quickSell",
+      });
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Imeshindwa kuuza vocha", {
+        id: "quickSell",
+      });
+    }
   };
 
   return (
@@ -213,6 +262,17 @@ const Packages = () => {
                     {canWrite && (
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {/* KITUFE CHA KUUZA (KIPYA) */}
+                          {canSell && (
+                            <button
+                              onClick={() => handleQuickSell(pkg)}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                              title="Uza Vocha 1"
+                            >
+                              <ShoppingCart className="w-4 h-4" />
+                            </button>
+                          )}
+
                           <button
                             onClick={() => openEdit(pkg)}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"

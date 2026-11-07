@@ -1,11 +1,18 @@
 import { Calendar } from "lucide-react";
 
-const today = () => new Date().toISOString().split("T")[0];
+// Kazi ya kupata tarehe ya ndani (Local Time) badala ya UTC
+const getLocalDateString = (date) => {
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - offset * 60 * 1000);
+  return localDate.toISOString().split("T")[0];
+};
+
+const today = () => getLocalDateString(new Date());
 
 const daysAgo = (n) => {
   const d = new Date();
   d.setDate(d.getDate() - n);
-  return d.toISOString().split("T")[0];
+  return getLocalDateString(d);
 };
 
 const DateRangeFilter = ({
@@ -17,8 +24,15 @@ const DateRangeFilter = ({
   onClear,
 }) => {
   const setQuick = (days) => {
-    onFromChange(daysAgo(days));
-    onToChange(today());
+    const from = daysAgo(days);
+    const to = today();
+
+    // 1. Badilisha inputs
+    onFromChange(from);
+    onToChange(to);
+
+    // 2. Tuma ombi (Apply) papo hapo
+    onApply(from, to);
   };
 
   return (
@@ -70,7 +84,7 @@ const DateRangeFilter = ({
             type="date"
             value={fromDate}
             onChange={(e) => onFromChange(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
           />
         </div>
 
@@ -80,13 +94,14 @@ const DateRangeFilter = ({
             type="date"
             value={toDate}
             onChange={(e) => onToChange(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
           />
         </div>
 
         <div className="flex gap-2">
+          {/* Kitufe hiki sasa kinatumia onApply() bila parameters, kitachukua state ya sasa */}
           <button
-            onClick={onApply}
+            onClick={() => onApply()}
             className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition"
           >
             Tumia

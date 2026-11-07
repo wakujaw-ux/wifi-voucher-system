@@ -7,9 +7,10 @@ const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar - Desktop */}
-      <div className="hidden lg:block">
+    // h-screen inazuia page yote kusogea, overflow-hidden inaficha scrollbar ya nje
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Sidebar - Desktop (Inabaki pale pale) */}
+      <div className="hidden lg:block h-full">
         <Sidebar />
       </div>
 
@@ -20,16 +21,19 @@ const Layout = () => {
             className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
-          <div className="fixed inset-y-0 left-0 z-50 lg:hidden">
+          <div className="fixed inset-y-0 left-0 z-50 lg:hidden h-full">
             <Sidebar />
           </div>
         </>
       )}
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 h-full">
+        {/* Topbar inabaki pale pale */}
         <Topbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 p-6 overflow-x-auto">
+
+        {/* Hapa ndio scroll inatokea */}
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>
