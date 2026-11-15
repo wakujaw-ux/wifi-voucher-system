@@ -169,35 +169,41 @@ const Vouchers = () => {
           <p className="text-gray-500 mt-1">Kusimamia vocha za Wi-Fi</p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-
-          <button
-            onClick={() => navigate("/vouchers/print?status=AVAILABLE")}
-            className="inline-flex items-center gap-2 bg-orange-100 border border-gray-300 hover:bg-orange-200 text-gray-700 font-medium px-4 py-2 rounded-lg transition"
-            title="Chapisha vocha zilizopo"
-          >
-            <Printer className="w-4 h-4" />
-            Chapisha
-          </button>
-
-          {canGenerate && (
+        <div className="flex flex-wrap gap-2 sm:items-center sm:justify-between">
+          <div>
+            {canGenerate && (
+              <button
+                onClick={() => setShowGenerateModal(true)}
+                disabled={generating}
+                className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition"
+              >
+                <Plus className="w-4 h-4" />
+                Zalisha Vocha
+              </button>
+            )}
+          </div>
+          <div>
             <button
-              onClick={() => setShowGenerateModal(true)}
-              disabled={generating}
-              className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition"
+              onClick={() => navigate("/vouchers/print?status=AVAILABLE")}
+              className="inline-flex items-center gap-2 bg-orange-100 border border-gray-300 hover:bg-orange-200 text-gray-700 font-medium px-4 py-2 rounded-lg transition"
+              title="Chapisha vocha zilizopo"
             >
-              <Plus className="w-4 h-4" />
-              Zalisha Vocha
+              <Printer className="w-4 h-4" />
+              Chapisha
             </button>
-          )}
+          </div>
+          <div>
+            <button
+              onClick={fetchData}
+              disabled={loading}
+              className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -287,37 +293,40 @@ const Vouchers = () => {
               <p className="text-gray-500">Hakuna vocha zilizopatikana</p>
             </div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Code
                   </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Package
                   </th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
                     Bei
                   </th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
                     Muda
                   </th>
-                  <th className="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
                     Status
                   </th>
-                  <th className="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
                     Sync
                   </th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
                     Vitendo
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredVouchers.map((v) => (
-                  <tr key={v.id} className="hover:bg-gray-50">
+                  <tr
+                    key={v.id}
+                    className="hover:bg-gray-50/80 transition-colors duration-150 group"
+                  >
                     <td className="px-6 py-4">
-                      <span className="font-mono font-medium text-gray-800">
+                      <span className="font-mono text-sm font-semibold text-gray-800 group-hover:text-primary-600 transition">
                         {v.code}
                       </span>
                     </td>
