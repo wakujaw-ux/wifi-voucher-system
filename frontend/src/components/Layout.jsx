@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import ScrollToTop from "./ScrollToTop";
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,6 +36,7 @@ const Layout = () => {
         {/* Hapa ndio scroll inatokea */}
         <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
+          <ScrollToTop />
         </main>
       </div>
     </div>

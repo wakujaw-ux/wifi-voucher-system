@@ -46,9 +46,8 @@ const Sidebar = () => {
         </div>
         <span className="font-bold text-gray-800">Wifi Voucher</span>
       </div>
-
       {/* Menu */}
-      <nav className="flex-1 py-4 overflow-y-auto">
+      <nav className="flex-1 py-4 overflow-y-auto overflow-x-hidden">
         {menuItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -56,10 +55,10 @@ const Sidebar = () => {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-6 py-3 text-sm font-medium transition ${
+                `flex items-center gap-3 px-6 py-3 text-sm font-medium transition-all duration-200 border-l-4 ${
                   isActive
-                    ? "bg-primary-50 text-primary-600 border-r-2 border-primary-600"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    ? "bg-primary-50 text-primary-700 border-primary-600 shadow-sm"
+                    : "text-gray-600 border-transparent hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
                 }`
               }
             >
@@ -69,14 +68,15 @@ const Sidebar = () => {
           );
         })}
       </nav>
-
       {/* User & Logout */}
       <div className="border-t border-gray-200 p-4">
         <div className="mb-3 px-2">
           <p className="text-sm font-medium text-gray-800 truncate">
             {user?.full_name || user?.username}
           </p>
-          <p className="text-xs text-gray-500">{user?.role}</p>
+          <p className="text-xs text-primary-600 font-medium bg-primary-50 px-2 py-0.5 rounded-full inline-block mt-0.5">
+            {user?.role}
+          </p>
         </div>
         <button
           onClick={handleLogout}
