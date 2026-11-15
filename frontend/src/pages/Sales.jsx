@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   RefreshCw,
@@ -8,11 +9,11 @@ import {
   Calendar,
   Eye,
   FileText,
+  Loader2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { saleApi } from "../api/sale.api";
 import Modal from "../components/Modal";
-import { useNavigate } from "react-router-dom";
 
 const PAYMENT_LABELS = {
   CASH: "Cash",
@@ -32,11 +33,18 @@ const PAYMENT_COLORS = {
   BANK: "bg-purple-100 text-purple-700",
 };
 
-// Tarehe leo kwa format YYYY-MM-DD
-const today = new Date().toISOString().split("T")[0];
+// Kazi ya kupata tarehe ya ndani (Local Time)
+const getLocalDateString = (date) => {
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - offset * 60 * 1000);
+  return localDate.toISOString().split("T")[0];
+};
+
+const today = () => getLocalDateString(new Date());
 
 const Sales = () => {
   const navigate = useNavigate();
+
   const [sales, setSales] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -49,33 +57,36 @@ const Sales = () => {
   // Details modal
   const [selectedSale, setSelectedSale] = useState(null);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const filters = { limit: 200 };
-      if (fromDate) filters.from_date = fromDate;
-      if (toDate) filters.to_date = toDate + "T23:59:59";
+  const fetchData = useCallback(
+    async (fDate = fromDate, tDate = toDate) => {
+      setLoading(true);
+      try {
+        const filters = { limit: 200 };
+        if (fDate) filters.from_date = fDate;
+        if (tDate) filters.to_date = tDate + "T23:59:59";
 
-      const [salesRes, summaryRes] = await Promise.all([
-        saleApi.getAll(filters),
-        saleApi.getSummary({
-          from_date: fromDate || undefined,
-          to_date: toDate ? toDate + "T23:59:59" : undefined,
-        }),
-      ]);
+        const [salesRes, summaryRes] = await Promise.all([
+          saleApi.getAll(filters),
+          saleApi.getSummary({
+            from_date: fDate || undefined,
+            to_date: tDate ? tDate + "T23:59:59" : undefined,
+          }),
+        ]);
 
-      setSales(salesRes.data.sales || []);
-      setSummary(summaryRes.data.summary);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Imeshindwa kupata mauzo");
-    } finally {
-      setLoading(false);
-    }
-  };
+        setSales(salesRes.data.sales || []);
+        setSummary(summaryRes.data.summary);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Imeshindwa kupata mauzo");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fromDate, toDate],
+  );
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // Filter kwa search (client-side)
   const filteredSales = sales.filter((s) => {
@@ -88,146 +99,149 @@ const Sales = () => {
     );
   });
 
-  // Quick date ranges
+  const formatCurrency = (value) => {
+    const num = parseFloat(value || 0);
+    return `TZS ${num.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  };
+
   const setQuickRange = (days) => {
     const to = new Date();
     const from = new Date();
     from.setDate(from.getDate() - days);
 
-    setFromDate(from.toISOString().split("T")[0]);
-    setToDate(to.toISOString().split("T")[0]);
+    const fDate = getLocalDateString(from);
+    const tDate = getLocalDateString(to);
 
-    // Fetch with new dates
-    setTimeout(() => {
-      fetchDataWithRange(
-        from.toISOString().split("T")[0],
-        to.toISOString().split("T")[0],
-      );
-    }, 0);
-  };
-
-  const fetchDataWithRange = async (from, to) => {
-    setLoading(true);
-    try {
-      const filters = { limit: 200 };
-      if (from) filters.from_date = from;
-      if (to) filters.to_date = to + "T23:59:59";
-
-      const [salesRes, summaryRes] = await Promise.all([
-        saleApi.getAll(filters),
-        saleApi.getSummary({
-          from_date: from || undefined,
-          to_date: to ? to + "T23:59:59" : undefined,
-        }),
-      ]);
-
-      setSales(salesRes.data.sales || []);
-      setSummary(summaryRes.data.summary);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Imeshindwa kupata mauzo");
-    } finally {
-      setLoading(false);
-    }
+    setFromDate(fDate);
+    setToDate(tDate);
+    fetchData(fDate, tDate);
   };
 
   const clearFilters = () => {
     setFromDate("");
     setToDate("");
     setSearch("");
-    fetchDataWithRange("", "");
+    fetchData("", "");
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Mauzo (Sales)</h1>
           <p className="text-gray-500 mt-1">Rekodi za mauzo ya vocha</p>
         </div>
 
-        {/* KITUFE CHA RIPOTI KINAANZIA HAPA */}
-        <button
-          onClick={() => navigate("/reports?tab=sales")}
-          className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition"
-        >
-          <FileText className="w-4 h-4" />
-          Angalia Ripoti
-        </button>
-        {/* KITUFE CHA RIPOTI KINAISHIA HAPA */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => navigate("/reports?tab=sales")}
+            className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-xl transition shadow-sm"
+          >
+            <FileText className="w-4 h-4" />
+            Angalia Ripoti
+          </button>
 
-        <button
-          onClick={fetchData}
-          disabled={loading}
-          className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+          <button
+            onClick={() => fetchData()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-xl transition shadow-sm disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <SummaryCard
-            icon={ShoppingCart}
-            label="Mauzo"
-            value={summary.total_sales}
-            color="text-blue-600"
-            bgColor="bg-blue-50"
-          />
-          <SummaryCard
-            icon={DollarSign}
-            label="Mapato"
-            value={`TZS ${parseFloat(summary.total_revenue).toLocaleString()}`}
-            color="text-green-600"
-            bgColor="bg-green-50"
-          />
-          <SummaryCard
-            icon={TrendingUp}
-            label="Wastani kwa Mauzo"
-            value={`TZS ${parseFloat(summary.average_sale).toLocaleString()}`}
-            color="text-purple-600"
-            bgColor="bg-purple-50"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500">
+                  Idadi ya Mauzo
+                </p>
+                <p className="text-2xl font-bold text-gray-800 mt-1">
+                  {summary.total_sales}
+                </p>
+              </div>
+              <div className="bg-blue-50 p-2.5 rounded-xl">
+                <ShoppingCart className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500">
+                  Jumla ya Mapato
+                </p>
+                <p className="text-2xl font-bold text-gray-800 mt-1">
+                  {formatCurrency(summary.total_revenue)}
+                </p>
+              </div>
+              <div className="bg-green-50 p-2.5 rounded-xl">
+                <DollarSign className="w-5 h-5 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500">
+                  Wastani kwa Mauzo
+                </p>
+                <p className="text-2xl font-bold text-gray-800 mt-1">
+                  {formatCurrency(summary.average_sale)}
+                </p>
+              </div>
+              <div className="bg-purple-50 p-2.5 rounded-xl">
+                <TrendingUp className="w-5 h-5 text-purple-600" />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm mb-4">
-        <div className="p-4 border-b border-gray-100">
-          {/* Quick ranges */}
-          <div className="flex flex-wrap gap-2 mb-3">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="p-5 border-b border-gray-100 bg-gray-50/30">
+          {/* Quick Ranges */}
+          <div className="flex flex-wrap gap-2 mb-4">
             <button
               onClick={() => setQuickRange(0)}
-              className="text-xs px-3 py-1 border border-gray-300 rounded-full hover:bg-gray-50"
+              className="text-xs font-medium px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:text-primary-600 transition shadow-sm"
             >
               Leo
             </button>
             <button
               onClick={() => setQuickRange(7)}
-              className="text-xs px-3 py-1 border border-gray-300 rounded-full hover:bg-gray-50"
+              className="text-xs font-medium px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:text-primary-600 transition shadow-sm"
             >
               Wiki 1
             </button>
             <button
               onClick={() => setQuickRange(30)}
-              className="text-xs px-3 py-1 border border-gray-300 rounded-full hover:bg-gray-50"
+              className="text-xs font-medium px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:text-primary-600 transition shadow-sm"
             >
               Mwezi 1
             </button>
             <button
               onClick={() => setQuickRange(90)}
-              className="text-xs px-3 py-1 border border-gray-300 rounded-full hover:bg-gray-50"
+              className="text-xs font-medium px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:text-primary-600 transition shadow-sm"
             >
               Miezi 3
             </button>
+
             {(fromDate || toDate || search) && (
               <button
                 onClick={clearFilters}
-                className="text-xs px-3 py-1 border border-red-300 text-red-600 rounded-full hover:bg-red-50"
+                className="text-xs font-medium px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition shadow-sm ml-auto"
               >
-                Safisha
+                Safisha Vichujio
               </button>
             )}
           </div>
@@ -240,7 +254,7 @@ const Sales = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Tafuta voucher, package, simu..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm transition"
               />
             </div>
 
@@ -250,7 +264,7 @@ const Sales = () => {
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-sm transition text-gray-600"
               />
             </div>
 
@@ -260,96 +274,101 @@ const Sales = () => {
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-sm transition text-gray-600"
               />
             </div>
           </div>
 
-          {(fromDate || toDate) && (
+          <div className="mt-3 text-right">
             <button
-              onClick={fetchData}
-              className="mt-3 text-sm text-primary-600 hover:text-primary-700 font-medium"
+              onClick={() => fetchData()}
+              className="text-sm font-medium text-primary-600 hover:text-primary-700"
             >
-              Tumia filters →
+              Tumia Vichujio vya Tarehe &rarr;
             </button>
-          )}
+          </div>
         </div>
 
         {/* Table */}
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Inapakia...</div>
+            <div className="p-10 flex flex-col items-center justify-center text-gray-500">
+              <Loader2 className="w-8 h-8 animate-spin text-primary-500 mb-3" />
+              <p>Inapakia mauzo...</p>
+            </div>
           ) : filteredSales.length === 0 ? (
-            <div className="p-8 text-center">
+            <div className="p-10 text-center">
               <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">Hakuna mauzo yaliyopatikana</p>
+              <p className="text-gray-500 font-medium">
+                Hakuna mauzo yaliyopatikana
+              </p>
             </div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Voucher
                   </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Package
                   </th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
                     Kiasi
                   </th>
-                  <th className="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
                     Malipo
                   </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Operator
                   </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Tarehe
                   </th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">
-                    Vitendo
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                    Kitendo
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-gray-50">
+                  <tr
+                    key={sale.id}
+                    className="hover:bg-gray-50/80 transition-colors group"
+                  >
                     <td className="px-6 py-4">
-                      <span className="font-mono font-medium text-gray-800">
+                      <span className="font-mono text-sm font-semibold text-gray-800 group-hover:text-primary-600 transition">
                         {sale.voucher_code}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-sm text-gray-700">
                       {sale.package_name}
                     </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-800">
-                      TZS {parseFloat(sale.amount).toLocaleString()}
+                    <td className="px-6 py-4 text-sm font-bold text-gray-800 text-right">
+                      {formatCurrency(sale.amount)}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span
-                        className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                          PAYMENT_COLORS[sale.payment_method] ||
-                          "bg-gray-100 text-gray-600"
-                        }`}
+                        className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${PAYMENT_COLORS[sale.payment_method] || "bg-gray-100 text-gray-600"}`}
                       >
                         {PAYMENT_LABELS[sale.payment_method] ||
                           sale.payment_method}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-600 text-sm">
+                    <td className="px-6 py-4 text-sm text-gray-600">
                       {sale.operator_username || "-"}
                     </td>
-                    <td className="px-6 py-4 text-gray-600 text-sm">
+                    <td className="px-6 py-4 text-sm text-gray-600">
                       {new Date(sale.created_at).toLocaleString("sw-TZ", {
                         dateStyle: "short",
                         timeStyle: "short",
                       })}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => setSelectedSale(sale)}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                        title="Ona"
+                        title="Ona Maelezo"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -369,80 +388,74 @@ const Sales = () => {
         title="Maelezo ya Mauzo"
         size="md"
       >
-        {selectedSale && <SaleDetails sale={selectedSale} />}
+        {selectedSale && (
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-xl p-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Voucher</p>
+                  <p className="font-mono font-bold text-gray-800">
+                    {selectedSale.voucher_code}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Package</p>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {selectedSale.package_name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Kiasi</p>
+                  <p className="text-sm font-bold text-primary-600">
+                    {formatCurrency(selectedSale.amount)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Njia ya Malipo</p>
+                  <p className="text-sm text-gray-800">
+                    {PAYMENT_LABELS[selectedSale.payment_method]}
+                  </p>
+                </div>
+                {selectedSale.payment_reference && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-gray-500 mb-1">
+                      Kumbukumbu (Reference)
+                    </p>
+                    <p className="text-sm text-gray-800">
+                      {selectedSale.payment_reference}
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Operator</p>
+                  <p className="text-sm text-gray-800">
+                    {selectedSale.operator_username || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Tarehe</p>
+                  <p className="text-sm text-gray-800">
+                    {new Date(selectedSale.created_at).toLocaleString("sw-TZ", {
+                      dateStyle: "full",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                </div>
+                {selectedSale.customer_phone && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-gray-500 mb-1">Simu ya Mteja</p>
+                    <p className="text-sm text-gray-800">
+                      {selectedSale.customer_phone}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
 };
-
-// Helper components
-const SummaryCard = ({ icon: Icon, label, value, color, bgColor }) => (
-  <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-500">{label}</p>
-        <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
-      </div>
-      <div className={`${bgColor} p-3 rounded-lg`}>
-        <Icon className={`w-6 h-6 ${color}`} />
-      </div>
-    </div>
-  </div>
-);
-
-const SaleDetails = ({ sale }) => (
-  <div className="space-y-4">
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="grid grid-cols-2 gap-4">
-        <DetailRow label="Voucher" value={sale.voucher_code} mono />
-        <DetailRow label="Package" value={sale.package_name} />
-        <DetailRow
-          label="Kiasi"
-          value={`TZS ${parseFloat(sale.amount).toLocaleString()}`}
-        />
-        <DetailRow
-          label="Malipo"
-          value={PAYMENT_LABELS[sale.payment_method] || sale.payment_method}
-        />
-        {sale.payment_reference && (
-          <DetailRow label="Reference" value={sale.payment_reference} />
-        )}
-        <DetailRow label="Operator" value={sale.operator_username || "-"} />
-        {sale.customer_phone && (
-          <DetailRow label="Simu ya Mteja" value={sale.customer_phone} />
-        )}
-        <DetailRow
-          label="Tarehe"
-          value={new Date(sale.created_at).toLocaleString("sw-TZ", {
-            dateStyle: "full",
-            timeStyle: "short",
-          })}
-        />
-      </div>
-    </div>
-
-    {sale.notes && (
-      <div>
-        <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-          Maelezo
-        </p>
-        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
-          {sale.notes}
-        </p>
-      </div>
-    )}
-  </div>
-);
-
-const DetailRow = ({ label, value, mono = false }) => (
-  <div>
-    <p className="text-xs text-gray-500">{label}</p>
-    <p
-      className={`text-sm font-medium text-gray-800 ${mono ? "font-mono" : ""}`}
-    >
-      {value}
-    </p>
-  </div>
-);
 
 export default Sales;
